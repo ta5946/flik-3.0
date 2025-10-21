@@ -58,6 +58,14 @@ export default function SettingsScreen() {
       value: true,
     },
     {
+      id: 'email_notifications',
+      title: 'Email obvestila',
+      subtitle: 'Prejmi obvestila po email',
+      type: 'toggle',
+      icon: 'envelope',
+      value: false,
+    },
+    {
       id: 'language',
       title: 'Jezik',
       subtitle: 'Slovenščina',
@@ -79,6 +87,14 @@ export default function SettingsScreen() {
       icon: 'creditcard',
     },
     {
+      id: 'dark_mode',
+      title: 'Temni način',
+      subtitle: 'Avtomatsko preklapljanje',
+      type: 'toggle',
+      icon: 'moon.fill',
+      value: false,
+    },
+    {
       id: 'privacy',
       title: 'Zasebnost',
       subtitle: 'Zbiranje in uporaba podatkov',
@@ -86,11 +102,25 @@ export default function SettingsScreen() {
       icon: 'hand.raised',
     },
     {
+      id: 'data_export',
+      title: 'Izvoz podatkov',
+      subtitle: 'Prenesi svoje podatke',
+      type: 'navigation',
+      icon: 'square.and.arrow.down',
+    },
+    {
       id: 'help',
       title: 'Pomoč in podpora',
       subtitle: 'FAQ, kontakt, navodila',
       type: 'navigation',
       icon: 'questionmark.circle',
+    },
+    {
+      id: 'feedback',
+      title: 'Povratne informacije',
+      subtitle: 'Pošlji predloge in prijave napak',
+      type: 'navigation',
+      icon: 'text.bubble',
     },
     {
       id: 'about',
@@ -191,7 +221,7 @@ export default function SettingsScreen() {
         <View style={styles.profileSection}>
           <View style={styles.profileCard}>
             <View style={styles.profileAvatar}>
-              <IconSymbol name="person.fill" size={32} color="white" />
+              <IconSymbol name="person.fill" size={24} color="white" />
             </View>
             <View style={styles.profileInfo}>
               <ThemedText type="subtitle" style={styles.profileName}>
@@ -216,7 +246,7 @@ export default function SettingsScreen() {
 
         <View style={styles.settingsSection}>
           <ThemedText type="subtitle" style={styles.sectionTitle}>
-            Varnost in zasebnost
+            Varnost in obvestila
           </ThemedText>
           {settings.slice(3, 6).map(renderSettingItem)}
         </View>
@@ -225,18 +255,25 @@ export default function SettingsScreen() {
           <ThemedText type="subtitle" style={styles.sectionTitle}>
             Splošno
           </ThemedText>
-          {settings.slice(6, 9).map(renderSettingItem)}
+          {settings.slice(6, 10).map(renderSettingItem)}
+        </View>
+
+        <View style={styles.settingsSection}>
+          <ThemedText type="subtitle" style={styles.sectionTitle}>
+            Zasebnost in podatki
+          </ThemedText>
+          {settings.slice(10, 12).map(renderSettingItem)}
         </View>
 
         <View style={styles.settingsSection}>
           <ThemedText type="subtitle" style={styles.sectionTitle}>
             Podpora
           </ThemedText>
-          {settings.slice(9, 11).map(renderSettingItem)}
+          {settings.slice(12, 15).map(renderSettingItem)}
         </View>
 
         <View style={styles.settingsSection}>
-          {renderSettingItem(settings[11])}
+          {renderSettingItem(settings[15])}
         </View>
 
         <View style={styles.footer}>
@@ -261,61 +298,61 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   header: {
-    paddingTop: 60,
-    paddingBottom: 20,
+    paddingTop: 20,
+    paddingBottom: 12,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
   },
   profileSection: {
-    marginBottom: 24,
+    marginBottom: 16,
   },
   profileCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    padding: 12,
     borderRadius: 12,
     backgroundColor: 'rgba(0,0,0,0.05)',
   },
   profileAvatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: '#0066CC',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 16,
+    marginRight: 12,
   },
   profileInfo: {
     flex: 1,
   },
   profileName: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   profileEmail: {
-    fontSize: 14,
+    fontSize: 13,
     opacity: 0.7,
-    marginBottom: 2,
+    marginBottom: 1,
   },
   profileBank: {
     fontSize: 12,
     opacity: 0.6,
   },
   settingsSection: {
-    marginBottom: 24,
+    marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
-    marginBottom: 12,
+    marginBottom: 8,
     opacity: 0.8,
   },
   settingItem: {
     borderRadius: 12,
-    marginBottom: 8,
+    marginBottom: 6,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
@@ -329,39 +366,39 @@ const styles = StyleSheet.create({
   settingContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    padding: 12,
   },
   settingIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: 'rgba(0,0,0,0.05)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: 10,
   },
   settingInfo: {
     flex: 1,
   },
   settingTitle: {
-    fontSize: 16,
-    marginBottom: 2,
+    fontSize: 15,
+    marginBottom: 1,
   },
   settingSubtitle: {
-    fontSize: 14,
+    fontSize: 13,
     opacity: 0.7,
   },
   settingAction: {
-    marginLeft: 12,
+    marginLeft: 10,
   },
   footer: {
     alignItems: 'center',
-    paddingVertical: 24,
-    paddingBottom: 40,
+    paddingVertical: 12,
+    paddingBottom: 16,
   },
   footerText: {
     fontSize: 12,
     opacity: 0.6,
-    marginBottom: 4,
+    marginBottom: 2,
   },
 });

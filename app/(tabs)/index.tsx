@@ -10,6 +10,10 @@ import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 export default function HomeScreen() {
   const colorScheme = useColorScheme();
   const [balance] = useState(1250.75);
+  const [pendingRequests] = useState([
+    { id: 'p1', name: 'ALJAŽ V.', amount: 15.75, description: 'Za kino', type: 'incoming' },
+    { id: 'p2', name: 'MARTA K.', amount: 45.30, description: 'Za skupni obrok', type: 'outgoing' },
+  ]);
   const [recentTransactions] = useState([
     { id: '1', name: 'ALJAŽ V.', amount: 25.50, description: 'Za kosilo', type: 'sent' },
     { id: '2', name: 'MARTA K.', amount: 45.30, description: 'Sporočilo', type: 'received' },
@@ -20,7 +24,12 @@ export default function HomeScreen() {
     return `${amount.toFixed(2)} EUR`;
   };
 
-  const getTransactionIcon = (type: string) => {
+  const getTransactionIcon = (type: string, group?: string) => {
+    // Use group icon if transaction is part of a group
+    if (group) {
+      return 'person.3.fill';
+    }
+    
     switch (type) {
       case 'sent':
         return 'arrow.up.right';
@@ -28,6 +37,10 @@ export default function HomeScreen() {
         return 'arrow.down.left';
       case 'expense':
         return 'creditcard';
+      case 'incoming':
+        return 'arrow.down.left';
+      case 'outgoing':
+        return 'arrow.up.right';
       default:
         return 'circle';
     }
@@ -37,9 +50,11 @@ export default function HomeScreen() {
     switch (type) {
       case 'sent':
       case 'expense':
-        return Colors[colorScheme ?? 'light'].error;
+      case 'outgoing':
+        return '#DC3545'; // Red for outgoing/sent
       case 'received':
-        return Colors[colorScheme ?? 'light'].success;
+      case 'incoming':
+        return '#28A745'; // Green for incoming/received
       default:
         return Colors[colorScheme ?? 'light'].text;
     }
@@ -95,35 +110,10 @@ export default function HomeScreen() {
             
             <Link href="/request-money" asChild>
               <TouchableOpacity style={styles.actionButtonPrimary}>
-                <IconSymbol name="plus" size={24} color="white" />
+                <IconSymbol name="arrow.down.left" size={24} color="white" />
                 <ThemedText style={styles.actionButtonText}>Zahtevaj</ThemedText>
               </TouchableOpacity>
             </Link>
-          </View>
-        </View>
-
-        {/* Group Actions */}
-        <View style={styles.groupActions}>
-          <ThemedText type="subtitle" style={styles.sectionTitle}>
-            Skupine in proračuni
-          </ThemedText>
-          
-          <View style={styles.groupButtons}>
-            <Link href="/groups" asChild>
-              <TouchableOpacity style={styles.groupButtonSecondary}>
-                <IconSymbol name="person.3" size={20} color="#0066CC" />
-                <ThemedText style={styles.groupButtonTextSecondary}>
-                  Skupine
-                </ThemedText>
-              </TouchableOpacity>
-            </Link>
-            
-            <TouchableOpacity style={styles.groupButtonSecondary}>
-              <IconSymbol name="chart.bar" size={20} color="#0066CC" />
-              <ThemedText style={styles.groupButtonTextSecondary}>
-                Proračuni
-              </ThemedText>
-            </TouchableOpacity>
           </View>
         </View>
 
@@ -145,6 +135,65 @@ export default function HomeScreen() {
           </View>
         </View>
 
+        {/* Pending Requests */}
+        {pendingRequests.length > 0 && (
+          <View style={styles.pendingRequests}>
+            <View style={styles.pendingHeader}>
+              <ThemedText type="subtitle" style={styles.sectionTitle}>
+                Čakajoči zahtevki
+              </ThemedText>
+              <TouchableOpacity>
+                <ThemedText style={styles.seeAllText}>Vse</ThemedText>
+              </TouchableOpacity>
+            </View>
+            
+            {pendingRequests.map((request) => (
+              <TouchableOpacity key={request.id} style={styles.requestItem}>
+                <View style={styles.transactionIcon}>
+                  <IconSymbol
+                    name={getTransactionIcon(request.type)}
+                    size={20}
+                    color={getTransactionColor(request.type)}
+                  />
+                </View>
+                <View style={styles.transactionInfo}>
+                  <ThemedText type="defaultSemiBold" style={styles.transactionName}>
+                    {request.name}
+                  </ThemedText>
+                  <ThemedText style={styles.transactionDescription}>
+                    {request.description}
+                  </ThemedText>
+                </View>
+                <View style={styles.requestActions}>
+                  <ThemedText
+                    type="defaultSemiBold"
+                    style={[
+                      styles.transactionAmount,
+                      { color: getTransactionColor(request.type) },
+                    ]}
+                  >
+                    {request.type === 'incoming' ? '+' : '-'}{formatAmount(request.amount)}
+                  </ThemedText>
+                  {request.type === 'incoming' && (
+                    <View style={styles.requestButtons}>
+                      <TouchableOpacity style={styles.requestPayButton}>
+                        <ThemedText style={styles.requestPayButtonText}>Plačaj</ThemedText>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                  {request.type === 'outgoing' && (
+                    <View style={styles.requestButtons}>
+                      <TouchableOpacity style={styles.remindButton}>
+                        <ThemedText style={styles.remindButtonText}>Opomni</ThemedText>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
         {/* Recent Transactions */}
         <View style={styles.recentTransactions}>
           <View style={styles.recentHeader}>
@@ -162,7 +211,7 @@ export default function HomeScreen() {
             <TouchableOpacity key={transaction.id} style={styles.transactionItem}>
               <View style={styles.transactionIcon}>
                 <IconSymbol
-                  name={getTransactionIcon(transaction.type)}
+                  name={getTransactionIcon(transaction.type, transaction.group)}
                   size={20}
                   color={getTransactionColor(transaction.type)}
                 />
@@ -207,7 +256,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   header: {
-    paddingTop: 60,
+    paddingTop: 20,
     paddingBottom: 20,
   },
   headerTop: {
@@ -291,42 +340,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  groupActions: {
-    marginBottom: 24,
-  },
-  groupButtons: {
-    flexDirection: 'row',
-  },
-  groupButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    marginHorizontal: 6,
-  },
-  groupButtonSecondary: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    marginHorizontal: 6,
-    backgroundColor: '#E6F4FE',
-  },
-  groupButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  groupButtonTextSecondary: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#0066CC',
-  },
   instructionsSection: {
     marginBottom: 24,
     padding: 20,
@@ -387,6 +400,53 @@ const styles = StyleSheet.create({
   recentTransactions: {
     marginBottom: 24,
   },
+  pendingRequests: {
+    marginBottom: 24,
+  },
+  pendingHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  requestItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    borderRadius: 12,
+    marginBottom: 8,
+  },
+  requestActions: {
+    alignItems: 'flex-end',
+  },
+  requestButtons: {
+    flexDirection: 'row',
+    marginTop: 8,
+  },
+  requestPayButton: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    backgroundColor: 'rgba(255, 140, 0, 0.1)',
+  },
+  requestPayButtonText: {
+    fontSize: 12,
+    color: '#FF8C00',
+    fontWeight: '500',
+  },
+  remindButton: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    backgroundColor: 'rgba(255, 140, 0, 0.1)',
+  },
+  remindButtonText: {
+    fontSize: 12,
+    color: '#FF8C00',
+    fontWeight: '500',
+  },
   recentHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -401,8 +461,7 @@ const styles = StyleSheet.create({
   transactionItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    padding: 12,
     backgroundColor: 'rgba(0,0,0,0.05)',
     borderRadius: 12,
     marginBottom: 8,
@@ -411,7 +470,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: 'rgba(0,102,204,0.1)',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -420,13 +479,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   transactionName: {
-    fontSize: 16,
-    marginBottom: 2,
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 3,
   },
   transactionDescription: {
-    fontSize: 14,
+    fontSize: 13,
     opacity: 0.7,
-    marginBottom: 2,
+    marginBottom: 1,
   },
   transactionGroup: {
     fontSize: 12,
@@ -434,7 +494,7 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   transactionAmount: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
   },
 });

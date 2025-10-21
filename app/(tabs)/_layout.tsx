@@ -34,18 +34,18 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.3.fill" color={color} />,
         }}
       />
+          <Tabs.Screen
+            name="ai-insights"
+            options={{
+              title: 'AI vpogled',
+              tabBarIcon: ({ color }) => <IconSymbol size={28} name="brain.head.profile" color={color} />,
+            }}
+          />
       <Tabs.Screen
         name="transactions"
         options={{
           title: 'Transakcije',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="creditcard.fill" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="requests"
-        options={{
-          title: 'Zahtevki',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="bubble.left.fill" color={color} />,
         }}
       />
       <Tabs.Screen

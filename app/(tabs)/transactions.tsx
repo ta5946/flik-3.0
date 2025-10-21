@@ -16,6 +16,7 @@ interface Transaction {
   date: string;
   status: 'completed' | 'pending' | 'failed';
   groupName?: string;
+  category: string;
 }
 
 const mockTransactions: Transaction[] = [
@@ -28,6 +29,7 @@ const mockTransactions: Transaction[] = [
     recipient: 'ALJAŽ V.',
     date: '2024-01-15',
     status: 'completed',
+    category: 'Hrana in pijača',
   },
   {
     id: '2',
@@ -38,6 +40,7 @@ const mockTransactions: Transaction[] = [
     date: '2024-01-14',
     status: 'completed',
     groupName: 'Potovanje v Italijo',
+    category: 'Nastanitev',
   },
   {
     id: '3',
@@ -48,6 +51,7 @@ const mockTransactions: Transaction[] = [
     recipient: 'MARTA K.',
     date: '2024-01-13',
     status: 'completed',
+    category: 'Prejemek',
   },
   {
     id: '4',
@@ -59,20 +63,27 @@ const mockTransactions: Transaction[] = [
     date: '2024-01-12',
     status: 'completed',
     groupName: 'Večerja',
+    category: 'Hrana in pijača',
   },
 ];
 
 export default function TransactionsScreen() {
   const colorScheme = useColorScheme();
   const [transactions] = useState<Transaction[]>(mockTransactions);
-  const [filter, setFilter] = useState<'all' | 'sent' | 'received' | 'expenses'>('all');
+  const [directionFilter, setDirectionFilter] = useState<'all' | 'sent' | 'received'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'individual' | 'group'>('all');
 
   const formatAmount = (amount: number, type: string) => {
     const sign = type === 'sent' || type === 'expense' ? '-' : '+';
     return `${sign}${amount.toFixed(2)} EUR`;
   };
 
-  const getTransactionIcon = (type: string) => {
+  const getTransactionIcon = (type: string, groupName?: string) => {
+    // Use group icon if transaction is part of a group
+    if (groupName) {
+      return 'person.3.fill';
+    }
+    
     switch (type) {
       case 'sent':
         return 'arrow.up.right';
@@ -110,11 +121,17 @@ export default function TransactionsScreen() {
   };
 
   const filteredTransactions = transactions.filter(transaction => {
-    if (filter === 'all') return true;
-    if (filter === 'sent') return transaction.type === 'sent';
-    if (filter === 'received') return transaction.type === 'received';
-    if (filter === 'expenses') return transaction.type === 'expense';
-    return true;
+    // Direction filter
+    const directionMatch = directionFilter === 'all' || 
+      (directionFilter === 'sent' && transaction.type === 'sent') ||
+      (directionFilter === 'received' && (transaction.type === 'received' || transaction.type === 'settlement'));
+    
+    // Type filter
+    const typeMatch = typeFilter === 'all' ||
+      (typeFilter === 'individual' && !transaction.groupName) ||
+      (typeFilter === 'group' && transaction.groupName);
+    
+    return directionMatch && typeMatch;
   });
 
   const renderTransaction = (transaction: Transaction) => (
@@ -128,8 +145,8 @@ export default function TransactionsScreen() {
       <View style={styles.transactionHeader}>
         <View style={styles.transactionIcon}>
           <IconSymbol
-            name={getTransactionIcon(transaction.type)}
-            size={24}
+            name={getTransactionIcon(transaction.type, transaction.groupName)}
+            size={20}
             color={getTransactionColor(transaction.type)}
           />
         </View>
@@ -147,6 +164,9 @@ export default function TransactionsScreen() {
               {transaction.groupName}
             </ThemedText>
           )}
+          <ThemedText style={styles.transactionCategory}>
+            {transaction.category}
+          </ThemedText>
         </View>
         <View style={styles.transactionAmount}>
           <ThemedText
@@ -178,71 +198,114 @@ export default function TransactionsScreen() {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.filterTabs}>
-          <TouchableOpacity
-            style={[
-              styles.filterTab,
-              filter === 'all' && { backgroundColor: Colors[colorScheme ?? 'light'].primary },
-            ]}
-            onPress={() => setFilter('all')}
-          >
-            <ThemedText
+        {/* Direction Filter */}
+        <View style={styles.filterRow}>
+          <ThemedText style={styles.filterLabel}>Smer:</ThemedText>
+          <View style={styles.filterTabs}>
+            <TouchableOpacity
               style={[
-                styles.filterTabText,
-                filter === 'all' && { color: 'white' },
+                styles.filterTab,
+                directionFilter === 'all' && { backgroundColor: Colors[colorScheme ?? 'light'].primary },
               ]}
+              onPress={() => setDirectionFilter('all')}
             >
-              Vse
-            </ThemedText>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.filterTab,
-              filter === 'sent' && { backgroundColor: Colors[colorScheme ?? 'light'].primary },
-            ]}
-            onPress={() => setFilter('sent')}
-          >
-            <ThemedText
+              <ThemedText
+                style={[
+                  styles.filterTabText,
+                  directionFilter === 'all' && { color: 'white' },
+                ]}
+              >
+                Vse
+              </ThemedText>
+            </TouchableOpacity>
+            <TouchableOpacity
               style={[
-                styles.filterTabText,
-                filter === 'sent' && { color: 'white' },
+                styles.filterTab,
+                directionFilter === 'sent' && { backgroundColor: Colors[colorScheme ?? 'light'].primary },
               ]}
+              onPress={() => setDirectionFilter('sent')}
             >
-              Poslane
-            </ThemedText>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.filterTab,
-              filter === 'received' && { backgroundColor: Colors[colorScheme ?? 'light'].primary },
-            ]}
-            onPress={() => setFilter('received')}
-          >
-            <ThemedText
+              <ThemedText
+                style={[
+                  styles.filterTabText,
+                  directionFilter === 'sent' && { color: 'white' },
+                ]}
+              >
+                Poslane
+              </ThemedText>
+            </TouchableOpacity>
+            <TouchableOpacity
               style={[
-                styles.filterTabText,
-                filter === 'received' && { color: 'white' },
+                styles.filterTab,
+                directionFilter === 'received' && { backgroundColor: Colors[colorScheme ?? 'light'].primary },
               ]}
+              onPress={() => setDirectionFilter('received')}
             >
-              Prejete
-            </ThemedText>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.filterTab,
-              filter === 'expenses' && { backgroundColor: Colors[colorScheme ?? 'light'].primary },
-            ]}
-            onPress={() => setFilter('expenses')}
-          >
-            <ThemedText
+              <ThemedText
+                style={[
+                  styles.filterTabText,
+                  directionFilter === 'received' && { color: 'white' },
+                ]}
+              >
+                Prejete
+              </ThemedText>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Type Filter */}
+        <View style={styles.filterRow}>
+          <ThemedText style={styles.filterLabel}>Tip:</ThemedText>
+          <View style={styles.filterTabs}>
+            <TouchableOpacity
               style={[
-                styles.filterTabText,
-                filter === 'expenses' && { color: 'white' },
+                styles.filterTab,
+                typeFilter === 'all' && { backgroundColor: Colors[colorScheme ?? 'light'].primary },
               ]}
+              onPress={() => setTypeFilter('all')}
             >
-              Stroški
-            </ThemedText>
-          </TouchableOpacity>
+              <ThemedText
+                style={[
+                  styles.filterTabText,
+                  typeFilter === 'all' && { color: 'white' },
+                ]}
+              >
+                Vse
+              </ThemedText>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.filterTab,
+                typeFilter === 'individual' && { backgroundColor: Colors[colorScheme ?? 'light'].primary },
+              ]}
+              onPress={() => setTypeFilter('individual')}
+            >
+              <ThemedText
+                style={[
+                  styles.filterTabText,
+                  typeFilter === 'individual' && { color: 'white' },
+                ]}
+              >
+                Individualne
+              </ThemedText>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.filterTab,
+                typeFilter === 'group' && { backgroundColor: Colors[colorScheme ?? 'light'].primary },
+              ]}
+              onPress={() => setTypeFilter('group')}
+            >
+              <ThemedText
+                style={[
+                  styles.filterTabText,
+                  typeFilter === 'group' && { color: 'white' },
+                ]}
+              >
+                Skupinske
+              </ThemedText>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.transactionsList}>
@@ -265,8 +328,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 60,
-    paddingBottom: 20,
+    paddingTop: 20,
+    paddingBottom: 12,
   },
   title: {
     fontSize: 28,
@@ -275,43 +338,57 @@ const styles = StyleSheet.create({
   filterButton: {
     padding: 8,
   },
+  filterRow: {
+    marginBottom: 12,
+  },
+  filterLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 6,
+    opacity: 0.8,
+  },
   filterTabs: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 24,
   },
   filterTab: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.1)',
-    marginHorizontal: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0,0,0,0.08)',
+    marginHorizontal: 2,
+    flex: 1,
+    alignItems: 'center',
   },
   filterTabText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '500',
   },
   transactionsList: {
     marginBottom: 12,
   },
   transactionCard: {
-    padding: 16,
+    padding: 12,
     borderRadius: 12,
+    marginBottom: 8,
+    backgroundColor: 'rgba(0,0,0,0.05)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
   },
   transactionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   transactionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(0,0,0,0.05)',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,102,204,0.1)',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -320,29 +397,37 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   transactionDescription: {
-    fontSize: 16,
-    marginBottom: 4,
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 3,
   },
   transactionRecipient: {
-    fontSize: 14,
+    fontSize: 13,
     opacity: 0.7,
-    marginBottom: 2,
+    marginBottom: 1,
   },
   transactionGroup: {
     fontSize: 12,
     opacity: 0.6,
     fontStyle: 'italic',
   },
+  transactionCategory: {
+    fontSize: 11,
+    opacity: 0.7,
+    fontWeight: '500',
+    marginTop: 2,
+    color: '#0066CC',
+  },
   transactionAmount: {
     alignItems: 'flex-end',
   },
   amountText: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 2,
   },
   transactionDate: {
-    fontSize: 12,
+    fontSize: 11,
     opacity: 0.6,
   },
 });
