@@ -52,6 +52,9 @@ const MAPPING = {
   'moon.fill': 'dark-mode',
   'square.and.arrow.down': 'download',
   'text.bubble': 'feedback',
+  'qrcode': 'qr-code',
+  'camera.fill': 'camera-alt',
+  'xmark': 'close',
 } as IconMapping;
 
 /**

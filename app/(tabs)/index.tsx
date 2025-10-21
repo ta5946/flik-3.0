@@ -3,13 +3,14 @@ import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Link } from 'expo-router';
+import { Link, router } from 'expo-router';
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export default function HomeScreen() {
   const colorScheme = useColorScheme();
   const [balance] = useState(1250.75);
+  const [currentLanguage, setCurrentLanguage] = useState('SI');
   const [pendingRequests] = useState([
     { id: 'p1', name: 'ALJAŽ V.', amount: 15.75, description: 'Za kino', type: 'incoming' },
     { id: 'p2', name: 'MARTA K.', amount: 45.30, description: 'Za skupni obrok', type: 'outgoing' },
@@ -67,15 +68,31 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <View style={styles.logoContainer}>
-              <ThemedText style={styles.logoText}>flik</ThemedText>
+              <ThemedText style={styles.logoText}>flik™</ThemedText>
             </View>
             <View style={styles.languageSelector}>
-              <TouchableOpacity style={styles.languageButton}>
-                <ThemedText style={styles.languageText}>SI</ThemedText>
+              <ThemedText style={[
+                styles.languageLabel,
+                currentLanguage === 'SI' && styles.languageLabelActive
+              ]}>SI</ThemedText>
+              <TouchableOpacity 
+                style={styles.languageSwitch}
+                onPress={() => setCurrentLanguage(currentLanguage === 'SI' ? 'EN' : 'SI')}
+              >
+                <View style={[
+                  styles.languageSwitchTrack,
+                  currentLanguage === 'EN' && styles.languageSwitchTrackActive
+                ]}>
+                  <View style={[
+                    styles.languageSwitchThumb,
+                    currentLanguage === 'EN' && styles.languageSwitchThumbActive
+                  ]} />
+                </View>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.languageButton}>
-                <ThemedText style={styles.languageText}>EN</ThemedText>
-              </TouchableOpacity>
+              <ThemedText style={[
+                styles.languageLabel,
+                currentLanguage === 'EN' && styles.languageLabelActive
+              ]}>EN</ThemedText>
             </View>
           </View>
           
@@ -87,51 +104,34 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* Main Actions */}
-        <View style={styles.mainActions}>
+        {/* Quick Payment Actions */}
+        <View style={styles.quickPaymentSection}>
           <ThemedText type="subtitle" style={styles.sectionTitle}>
             Hitra plačila
           </ThemedText>
           
           <View style={styles.actionButtons}>
-            <Link href="/send-money" asChild>
-              <TouchableOpacity style={styles.actionButtonPrimary}>
-                <IconSymbol name="creditcard" size={24} color="white" />
-                <ThemedText style={styles.actionButtonText}>Plačaj</ThemedText>
-              </TouchableOpacity>
-            </Link>
+            <TouchableOpacity 
+              style={styles.actionButtonPrimary}
+              onPress={() => router.push('/qr-scanner')}
+            >
+              <IconSymbol name="qrcode" size={28} color="white" />
+              <ThemedText style={styles.actionButtonText}>Skeniraj QR</ThemedText>
+            </TouchableOpacity>
             
             <Link href="/send-money" asChild>
               <TouchableOpacity style={styles.actionButtonPrimary}>
-                <IconSymbol name="arrow.up.right" size={24} color="white" />
+                <IconSymbol name="arrow.up.right" size={28} color="white" />
                 <ThemedText style={styles.actionButtonText}>Pošlji</ThemedText>
               </TouchableOpacity>
             </Link>
             
             <Link href="/request-money" asChild>
               <TouchableOpacity style={styles.actionButtonPrimary}>
-                <IconSymbol name="arrow.down.left" size={24} color="white" />
+                <IconSymbol name="arrow.down.left" size={28} color="white" />
                 <ThemedText style={styles.actionButtonText}>Zahtevaj</ThemedText>
               </TouchableOpacity>
             </Link>
-          </View>
-        </View>
-
-        {/* Quick Payment Instructions */}
-        <View style={styles.instructionsSection}>
-          <ThemedText type="subtitle" style={styles.sectionTitle}>
-            Začni z uporabo Flik Pay aplikacije
-          </ThemedText>
-          <ThemedText style={styles.instructionText}>
-            Na POS terminalu brezstično skenirajte QR kodo ali prislonite telefon z vklopljenim NFC-jem.
-          </ThemedText>
-          <TouchableOpacity style={styles.payButtonPrimary}>
-            <ThemedText style={styles.payButtonText}>PLAČAJ</ThemedText>
-          </TouchableOpacity>
-          <View style={styles.dots}>
-            <View style={styles.dotPrimary} />
-            <View style={styles.dotSecondary} />
-            <View style={styles.dotSecondary} />
           </View>
         </View>
 
@@ -142,9 +142,6 @@ export default function HomeScreen() {
               <ThemedText type="subtitle" style={styles.sectionTitle}>
                 Čakajoči zahtevki
               </ThemedText>
-              <TouchableOpacity>
-                <ThemedText style={styles.seeAllText}>Vse</ThemedText>
-              </TouchableOpacity>
             </View>
             
             {pendingRequests.map((request) => (
@@ -257,157 +254,136 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingTop: 20,
-    paddingBottom: 20,
+    paddingBottom: 16,
   },
   headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   logoContainer: {
     alignItems: 'center',
   },
   logoText: {
-    fontSize: 24,
+    fontSize: 32,
     fontWeight: 'bold',
-    color: '#0066CC',
+    color: '#007AFF',
   },
   languageSelector: {
     flexDirection: 'row',
+    alignItems: 'center',
   },
-  languageButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    backgroundColor: 'rgba(0,0,0,0.1)',
-    marginHorizontal: 4,
-  },
-  languageText: {
+  languageLabel: {
     fontSize: 14,
     fontWeight: '500',
+    color: 'rgba(0,0,0,0.5)',
+    marginHorizontal: 8,
+  },
+  languageLabelActive: {
+    color: '#007AFF',
+    fontWeight: '600',
+  },
+  languageSwitch: {
+    alignItems: 'center',
+  },
+  languageSwitchTrack: {
+    width: 40,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    justifyContent: 'center',
+  },
+  languageSwitchTrackActive: {
+    backgroundColor: '#007AFF',
+  },
+  languageSwitchThumb: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: 'white',
+    marginLeft: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  languageSwitchThumbActive: {
+    marginLeft: 22,
   },
   balanceCard: {
-    backgroundColor: '#E6F4FE',
-    padding: 20,
-    borderRadius: 16,
+    backgroundColor: 'rgba(0,122,255,0.05)',
+    padding: 16,
+    borderRadius: 12,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0,122,255,0.1)',
   },
   balanceLabel: {
     fontSize: 16,
     opacity: 0.7,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   balanceAmount: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#0066CC',
+    fontSize: 28,
+    fontWeight: '600',
+    color: '#007AFF',
   },
-  mainActions: {
-    marginBottom: 24,
+  quickPaymentSection: {
+    marginBottom: 20,
+    padding: 20,
+    backgroundColor: 'white',
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    marginBottom: 16,
+    marginBottom: 12,
+    color: '#1A1A1A',
   },
   actionButtons: {
     flexDirection: 'row',
   },
-  actionButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    marginHorizontal: 6,
-  },
   actionButtonPrimary: {
     flex: 1,
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderRadius: 12,
+    paddingVertical: 22,
+    paddingHorizontal: 18,
+    borderRadius: 18,
     marginHorizontal: 6,
-    backgroundColor: '#0066CC',
+    backgroundColor: '#3B82F6',
+    shadowColor: '#3B82F6',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 3,
+    borderWidth: 0.5,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   actionButtonText: {
     color: 'white',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
-  },
-  instructionsSection: {
-    marginBottom: 24,
-    padding: 20,
-    backgroundColor: 'rgba(0,0,0,0.05)',
-    borderRadius: 16,
-  },
-  instructionText: {
-    fontSize: 14,
-    opacity: 0.8,
-    marginBottom: 16,
-    lineHeight: 20,
-  },
-  payButton: {
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  payButtonPrimary: {
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: 16,
-    backgroundColor: '#0066CC',
-  },
-  payButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  dots: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginHorizontal: 4,
-  },
-  dotPrimary: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginHorizontal: 4,
-    backgroundColor: '#0066CC',
-  },
-  dotSecondary: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginHorizontal: 4,
-    backgroundColor: '#687076',
+    marginTop: 8,
+    textAlign: 'center',
+    letterSpacing: 0.3,
   },
   recentTransactions: {
-    marginBottom: 24,
+    marginBottom: 20,
   },
   pendingRequests: {
-    marginBottom: 24,
+    marginBottom: 20,
   },
   pendingHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   requestItem: {
     flexDirection: 'row',
@@ -426,32 +402,42 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   requestPayButton: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 6,
-    backgroundColor: 'rgba(255, 140, 0, 0.1)',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: '#F59E0B',
+    shadowColor: '#F59E0B',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 2,
   },
   requestPayButtonText: {
-    fontSize: 12,
-    color: '#FF8C00',
+    fontSize: 13,
+    color: 'white',
     fontWeight: '500',
   },
   remindButton: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 6,
-    backgroundColor: 'rgba(255, 140, 0, 0.1)',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: '#F59E0B',
+    shadowColor: '#F59E0B',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 2,
   },
   remindButtonText: {
-    fontSize: 12,
-    color: '#FF8C00',
+    fontSize: 13,
+    color: 'white',
     fontWeight: '500',
   },
   recentHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   seeAllText: {
     fontSize: 14,
