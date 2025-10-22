@@ -24,109 +24,25 @@ export default function GroupsScreen() {
     return Colors[colorScheme ?? 'light'].text;
   };
 
-        <View style={styles.groupsList}>
-          <ThemedText type="subtitle" style={styles.sectionTitle}>
-            Vaše skupine
-          </ThemedText>
-          {groups.map((group) => {
-            const yourBalance = group.members.length > 0 ? group.members[0].balance : 0;
-            const progressPercentage = group.budget > 0 ? (group.totalExpenses / group.budget) * 100 : 0;
-            
-            return (
-              <TouchableOpacity
-                key={group.id}
-                style={[
-                  styles.groupCard,
-                  { backgroundColor: Colors[colorScheme ?? 'light'].background },
-                  { borderLeftColor: group.color },
-                  group.closed && styles.closedGroupCard,
-                ]}
-                onPress={() => router.push(`/group-detail?id=${group.id}`)}
-              >
-                <View style={styles.groupHeader}>
-                  <View style={styles.groupInfo}>
-                    <View style={styles.groupNameRow}>
-                      <ThemedText type="subtitle" style={styles.groupName}>
-                        {group.name}
-                      </ThemedText>
-                      {group.closed && (
-                        <View style={styles.closedBadge}>
-                          <IconSymbol name="checkmark.circle.fill" size={12} color="white" />
-                          <ThemedText style={styles.closedBadgeText}>ZAPRTA</ThemedText>
-                        </View>
-                      )}
-                    </View>
-                    <ThemedText style={styles.memberCount}>
-                      {group.members.length} članov
-                    </ThemedText>
-                  </View>
-                  <IconSymbol name="chevron.right" size={20} color={Colors[colorScheme ?? 'light'].icon} />
-                </View>
-                
-                <View style={styles.groupStats}>
-                  <View style={styles.statItem}>
-                    <ThemedText style={styles.statLabel}>Skupni stroški</ThemedText>
-                    <ThemedText type="defaultSemiBold" style={styles.statValue}>
-                      {formatAmount(group.totalExpenses)}
-                    </ThemedText>
-                  </View>
-                  <View style={styles.statItem}>
-                    <ThemedText style={styles.statLabel}>Vaš saldo</ThemedText>
-                    <ThemedText 
-                      type="defaultSemiBold" 
-                      style={[styles.statValue, { color: getBalanceColor(yourBalance) }]}
-                    >
-                      {yourBalance > 0 ? '+' : ''}{formatAmount(yourBalance)}
-                    </ThemedText>
-                  </View>
-                </View>
-
-                {/* Budget Progress - only show if budget is set */}
-                {group.budget > 0 && (
-                  <View style={styles.budgetProgress}>
-                    <View style={styles.progressBar}>
-                      <View 
-                        style={[
-                          styles.progressFill, 
-                          { 
-                            backgroundColor: group.color,
-                            width: `${Math.min(progressPercentage, 100)}%`
-                          }
-                        ]} 
-                      />
-                    </View>
-                  </View>
-                )}
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
   return (
     <ThemedView style={styles.container}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <ThemedText type="title" style={styles.title}>
-            Skupine
-          </ThemedText>
-        </View>
-
-        <View style={styles.quickActions}>
-          <TouchableOpacity 
-            style={[styles.actionButton, { backgroundColor: Colors[colorScheme ?? 'light'].primary }]}
-            onPress={() => setShowAddGroupModal(true)}
-          >
-            <IconSymbol name="plus" size={20} color="white" />
-            <ThemedText style={styles.actionButtonText}>Nova skupina</ThemedText>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.actionButton, { backgroundColor: Colors[colorScheme ?? 'light'].secondary }]}>
-            <IconSymbol name="person.fill" size={20} color={Colors[colorScheme ?? 'light'].primary} />
-            <ThemedText style={[styles.actionButtonText, { color: Colors[colorScheme ?? 'light'].primary }]}>
-              Pridruži se
+          <View style={styles.headerContent}>
+            <View style={styles.logoWrapper}>
+              <View style={styles.logoIcon}>
+                <IconSymbol name="creditcard.fill" size={24} color="white" />
+              </View>
+              <ThemedText type="title" style={styles.headerTitle}>
+                Flik Pay
+              </ThemedText>
+            </View>
+            <ThemedText style={styles.headerSubtitle}>
+              Upravljajte svoje skupine in stroške
             </ThemedText>
-          </TouchableOpacity>
+          </View>
         </View>
-
+        
         <View style={styles.groupsList}>
           <ThemedText type="subtitle" style={styles.sectionTitle}>
             Vaše skupine
@@ -203,14 +119,27 @@ export default function GroupsScreen() {
                 )}
               </TouchableOpacity>
             );
-            })
-          ) : (
+          }))
+          : (
             <View style={styles.emptyState}>
               <ThemedText style={styles.emptyStateText}>
                 Še nimate nobene skupine. Ustvarite prvo skupino z gumbom zgoraj.
               </ThemedText>
             </View>
           )}
+        </View>
+
+        {/* Add Group Button */}
+        <View style={styles.addGroupSection}>
+          <TouchableOpacity 
+            style={styles.addGroupButton}
+            onPress={() => setShowAddGroupModal(true)}
+          >
+            <IconSymbol name="plus" size={20} color="white" />
+            <ThemedText style={styles.addGroupButtonText}>
+              Ustvari novo skupino
+            </ThemedText>
+          </TouchableOpacity>
         </View>
 
       </ScrollView>
@@ -226,15 +155,47 @@ export default function GroupsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#f8fafc',
   },
   scrollView: {
     flex: 1,
-    paddingHorizontal: 20,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    paddingTop: 60,
+    paddingHorizontal: 20,
+    paddingBottom: 24,
+    backgroundColor: '#1e40af', // Flik Pay blue
+  },
+  headerContent: {
     alignItems: 'center',
+  },
+  logoWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  logoIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: 'white',
+    letterSpacing: -0.5,
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontWeight: '500',
+  },
+  groupsList: {
+    paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 20,
   },
@@ -264,38 +225,38 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: '600',
   },
-  groupsList: {
-    marginBottom: 16,
-  },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 12,
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 20,
+    color: '#1e293b',
+    letterSpacing: -0.3,
   },
   groupCard: {
-    padding: 12,
-    borderRadius: 10,
-    marginBottom: 8,
-    borderLeftWidth: 4,
+    padding: 24,
+    borderRadius: 20,
+    marginBottom: 16,
+    borderLeftWidth: 6,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
   },
   groupHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 16,
   },
   groupInfo: {
     flex: 1,
   },
   groupName: {
-    fontSize: 15,
-    fontWeight: '600',
-    marginBottom: 2,
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 6,
+    color: '#1e293b',
   },
   groupNameRow: {
     flexDirection: 'row',
@@ -327,6 +288,30 @@ const styles = StyleSheet.create({
     opacity: 0.7,
     borderColor: '#10B981',
     borderWidth: 1,
+  },
+  addGroupSection: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  addGroupButton: {
+    backgroundColor: '#1e40af', // Flik Pay blue
+    paddingVertical: 20,
+    paddingHorizontal: 24,
+    borderRadius: 16,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    shadowColor: '#1e40af',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  addGroupButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '700',
+    marginLeft: 8,
   },
   memberCount: {
     fontSize: 12,

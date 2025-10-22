@@ -69,11 +69,18 @@ export default function SendMoneyScreen() {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <IconSymbol name="chevron.left" size={24} color={Colors[colorScheme ?? 'light'].text} />
+            <IconSymbol name="chevron.left" size={24} color="white" />
           </TouchableOpacity>
-          <ThemedText type="subtitle" style={styles.headerTitle}>
-            Pošlji
-          </ThemedText>
+          <View style={styles.headerContent}>
+            <View style={styles.logoWrapper}>
+              <View style={styles.logoIcon}>
+                <IconSymbol name="creditcard.fill" size={20} color="white" />
+              </View>
+              <ThemedText type="subtitle" style={styles.headerTitle}>
+                Pošlji denar
+              </ThemedText>
+            </View>
+          </View>
           <View style={styles.placeholder} />
         </View>
 
@@ -123,7 +130,7 @@ export default function SendMoneyScreen() {
                 key={contact.id}
                 style={[
                   styles.contactItem,
-                  selectedContact?.id === contact.id && { backgroundColor: Colors[colorScheme ?? 'light'].secondary },
+                  selectedContact?.id === contact.id && { backgroundColor: '#eff6ff', borderWidth: 1, borderColor: '#1e40af' },
                 ]}
                 onPress={() => selectContact(contact)}
               >
@@ -254,24 +261,43 @@ export default function SendMoneyScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#f8fafc',
   },
   scrollView: {
     flex: 1,
-    paddingHorizontal: 20,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 20,
-    paddingBottom: 20,
+    paddingTop: 60,
+    paddingHorizontal: 20,
+    paddingBottom: 24,
+    backgroundColor: '#1e40af', // Flik Pay blue
   },
   backButton: {
     padding: 8,
   },
+  headerContent: {
+    alignItems: 'center',
+  },
+  logoWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  logoIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+  },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: '700',
+    color: 'white',
   },
   placeholder: {
     width: 40,
@@ -288,16 +314,26 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   contactList: {
-    marginTop: 8,
-    marginBottom: 16,
+    marginTop: 12,
+    marginBottom: 20,
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
   },
   contactItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
     borderRadius: 12,
-    backgroundColor: 'rgba(0,0,0,0.05)',
-    marginBottom: 8,
+    backgroundColor: 'transparent',
+    marginBottom: 4,
   },
   contactAvatar: {
     width: 40,

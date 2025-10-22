@@ -126,13 +126,27 @@ export default function AddGroupModal({ visible, onClose }: AddGroupModalProps) 
     >
       <ThemedView style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={handleClose}>
-            <ThemedText style={styles.cancelButton}>Prekliči</ThemedText>
-          </TouchableOpacity>
-          <ThemedText type="subtitle" style={styles.title}>Nova skupina</ThemedText>
-          <TouchableOpacity onPress={handleCreateGroup}>
-            <ThemedText style={styles.createButton}>Ustvari</ThemedText>
-          </TouchableOpacity>
+          <View style={styles.headerContent}>
+            <View style={styles.logoWrapper}>
+              <View style={styles.logoIcon}>
+                <IconSymbol name="creditcard.fill" size={24} color="white" />
+              </View>
+              <ThemedText type="title" style={styles.headerTitle}>
+                Nova skupina
+              </ThemedText>
+            </View>
+            <ThemedText style={styles.headerSubtitle}>
+              Ustvarite novo skupino za deljenje stroškov
+            </ThemedText>
+          </View>
+          <View style={styles.headerActions}>
+            <TouchableOpacity onPress={handleClose} style={styles.cancelButton}>
+              <ThemedText style={styles.cancelButtonText}>Prekliči</ThemedText>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleCreateGroup} style={styles.createButton}>
+              <ThemedText style={styles.createButtonText}>Ustvari</ThemedText>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -321,33 +335,66 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8f9fa',
   },
   header: {
+    backgroundColor: '#1e40af',
+    paddingTop: 20,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+  },
+  headerContent: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  logoWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  logoIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: 'white',
+    letterSpacing: -0.5,
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
+  },
+  headerActions: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 16,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.08)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '600',
   },
   cancelButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  cancelButtonText: {
     fontSize: 16,
-    color: '#666',
+    color: 'white',
+    fontWeight: '600',
   },
   createButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    backgroundColor: 'white',
+  },
+  createButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#0066CC',
+    color: '#1e40af',
+    fontWeight: '700',
   },
   content: {
     flex: 1,

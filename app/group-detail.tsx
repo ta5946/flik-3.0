@@ -970,7 +970,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   saveButton: {
-    backgroundColor: '#0066CC',
+    backgroundColor: '#1e40af', // Flik Pay blue
   },
   saveButtonText: {
     color: 'white',
@@ -997,7 +997,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#0066CC',
+    backgroundColor: '#1e40af', // Flik Pay blue
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -1086,7 +1086,7 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   selectedChip: {
-    backgroundColor: '#0066CC',
+    backgroundColor: '#1e40af', // Flik Pay blue
     borderColor: '#0066CC',
   },
   chipText: {
@@ -1119,7 +1119,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   splitModeButtonActive: {
-    backgroundColor: '#0066CC',
+    backgroundColor: '#1e40af', // Flik Pay blue
   },
   splitModeText: {
     fontSize: 14,

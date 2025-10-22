@@ -213,9 +213,19 @@ export default function SettingsScreen() {
     <ThemedView style={styles.container}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <ThemedText type="title" style={styles.title}>
-            Nastavitve
-          </ThemedText>
+          <View style={styles.headerContent}>
+            <View style={styles.logoWrapper}>
+              <View style={styles.logoIcon}>
+                <IconSymbol name="creditcard.fill" size={24} color="white" />
+              </View>
+              <ThemedText type="title" style={styles.headerTitle}>
+                Nastavitve
+              </ThemedText>
+            </View>
+            <ThemedText style={styles.headerSubtitle}>
+              Upravljajte svoje nastavitve in račun
+            </ThemedText>
+          </View>
         </View>
 
         <View style={styles.profileSection}>
@@ -292,72 +302,117 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#f8fafc',
   },
   scrollView: {
     flex: 1,
-    paddingHorizontal: 20,
   },
   header: {
-    paddingTop: 20,
-    paddingBottom: 12,
+    backgroundColor: '#1e40af',
+    paddingTop: 60,
+    paddingBottom: 30,
+    paddingHorizontal: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 8,
   },
-  title: {
+  headerContent: {
+    alignItems: 'center',
+  },
+  logoWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  logoIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  headerTitle: {
     fontSize: 28,
     fontWeight: 'bold',
+    color: 'white',
+    letterSpacing: -0.5,
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
   },
   profileSection: {
-    marginBottom: 16,
+    marginBottom: 24,
+    paddingHorizontal: 20,
   },
   profileCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    borderRadius: 12,
-    backgroundColor: 'rgba(0,0,0,0.05)',
+    padding: 20,
+    borderRadius: 16,
+    backgroundColor: 'white',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
   },
   profileAvatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#0066CC',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#1e40af',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: 16,
   },
   profileInfo: {
     flex: 1,
   },
   profileName: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 2,
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 4,
+    color: '#1e293b',
   },
   profileEmail: {
-    fontSize: 13,
-    opacity: 0.7,
-    marginBottom: 1,
+    fontSize: 16,
+    color: '#64748b',
+    marginBottom: 2,
   },
   profileBank: {
-    fontSize: 12,
-    opacity: 0.6,
+    fontSize: 14,
+    color: '#94a3b8',
   },
   settingsSection: {
-    marginBottom: 16,
+    marginBottom: 24,
+    paddingHorizontal: 20,
   },
   sectionTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    marginBottom: 8,
-    opacity: 0.8,
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 16,
+    color: '#1e293b',
+    letterSpacing: -0.3,
   },
   settingItem: {
-    borderRadius: 12,
-    marginBottom: 6,
+    borderRadius: 16,
+    marginBottom: 12,
+    backgroundColor: 'white',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    shadowRadius: 8,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
   },
   logoutItem: {
     borderWidth: 1,
@@ -366,39 +421,43 @@ const styles = StyleSheet.create({
   settingContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
+    padding: 20,
   },
   settingIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(0,0,0,0.05)',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#f8fafc',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 10,
+    marginRight: 16,
   },
   settingInfo: {
     flex: 1,
   },
   settingTitle: {
-    fontSize: 15,
-    marginBottom: 1,
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 2,
+    color: '#1e293b',
   },
   settingSubtitle: {
-    fontSize: 13,
-    opacity: 0.7,
+    fontSize: 14,
+    color: '#64748b',
   },
   settingAction: {
-    marginLeft: 10,
+    marginLeft: 16,
   },
   footer: {
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingBottom: 16,
+    paddingVertical: 24,
+    paddingBottom: 32,
+    paddingHorizontal: 20,
   },
   footerText: {
-    fontSize: 12,
-    opacity: 0.6,
-    marginBottom: 2,
+    fontSize: 14,
+    color: '#94a3b8',
+    marginBottom: 4,
+    textAlign: 'center',
   },
 });

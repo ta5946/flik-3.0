@@ -387,12 +387,19 @@ export default function TransactionsScreen() {
     <ThemedView style={styles.container}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <ThemedText type="title" style={styles.title}>
-            {showPendingOnly ? 'Čakajoči zahtevki' : showCompletedOnly ? 'Zadnje transakcije' : 'Transakcije'}
-          </ThemedText>
-          <TouchableOpacity style={styles.filterButton}>
-            <IconSymbol name="line.3.horizontal.decrease" size={24} color={Colors[colorScheme ?? 'light'].primary} />
-          </TouchableOpacity>
+          <View style={styles.headerContent}>
+            <View style={styles.logoWrapper}>
+              <View style={styles.logoIcon}>
+                <IconSymbol name="creditcard.fill" size={24} color="white" />
+              </View>
+              <ThemedText type="title" style={styles.headerTitle}>
+                {showPendingOnly ? 'Čakajoči zahtevki' : showCompletedOnly ? 'Zadnje transakcije' : 'Transakcije'}
+              </ThemedText>
+            </View>
+            <ThemedText style={styles.headerSubtitle}>
+              {showPendingOnly ? 'Vaši čakajoči zahtevki' : showCompletedOnly ? 'Zgodovina transakcij' : 'Vse transakcije'}
+            </ThemedText>
+          </View>
         </View>
 
         {/* Direction Filter */}
@@ -516,66 +523,100 @@ export default function TransactionsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#f8fafc',
   },
   scrollView: {
     flex: 1,
-    paddingHorizontal: 20,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 20,
-    paddingBottom: 12,
+    backgroundColor: '#1e40af',
+    paddingTop: 60,
+    paddingBottom: 30,
+    paddingHorizontal: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 8,
   },
-  title: {
+  headerContent: {
+    alignItems: 'center',
+  },
+  logoWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  logoIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  headerTitle: {
     fontSize: 28,
     fontWeight: 'bold',
+    color: 'white',
+    letterSpacing: -0.5,
   },
-  filterButton: {
-    padding: 8,
+  headerSubtitle: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
   },
   filterRow: {
-    marginBottom: 12,
+    marginBottom: 20,
+    paddingHorizontal: 20,
   },
   filterLabel: {
-    fontSize: 13,
+    fontSize: 16,
     fontWeight: '600',
-    marginBottom: 6,
-    opacity: 0.8,
+    marginBottom: 12,
+    color: '#1e293b',
   },
   filterTabs: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   filterTab: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-    backgroundColor: 'rgba(0,0,0,0.08)',
-    marginHorizontal: 2,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: 'transparent',
     flex: 1,
     alignItems: 'center',
   },
   filterTabText: {
-    fontSize: 13,
-    fontWeight: '500',
+    fontSize: 14,
+    fontWeight: '600',
   },
   transactionsList: {
-    marginBottom: 12,
+    marginBottom: 20,
+    paddingHorizontal: 20,
   },
   transactionCard: {
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 8,
-    backgroundColor: 'rgba(0,0,0,0.05)',
+    padding: 20,
+    borderRadius: 16,
+    marginBottom: 16,
+    backgroundColor: 'white',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowRadius: 12,
+    elevation: 4,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
+    borderColor: '#f1f5f9',
   },
   transactionHeader: {
     flexDirection: 'row',

@@ -95,9 +95,19 @@ export default function AIInsightsScreen() {
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
-          <ThemedText type="subtitle" style={styles.headerTitle}>
-            AI vpogled
-          </ThemedText>
+          <View style={styles.headerContent}>
+            <View style={styles.logoWrapper}>
+              <View style={styles.logoIcon}>
+                <IconSymbol name="creditcard.fill" size={24} color="white" />
+              </View>
+              <ThemedText type="title" style={styles.headerTitle}>
+                AI vpogled
+              </ThemedText>
+            </View>
+            <ThemedText style={styles.headerSubtitle}>
+              Pametna analiza vaših financ
+            </ThemedText>
+          </View>
         </View>
 
         {/* Period Selector */}
@@ -106,9 +116,9 @@ export default function AIInsightsScreen() {
             style={styles.periodButton}
             onPress={() => setShowMonthModal(true)}
           >
-            <IconSymbol name="calendar" size={20} color="#0066CC" />
+            <IconSymbol name="calendar" size={20} color="#1e40af" />
             <ThemedText style={styles.periodText}>{selectedPeriod}</ThemedText>
-            <IconSymbol name="chevron.down" size={16} color="#0066CC" />
+            <IconSymbol name="chevron.down" size={16} color="#1e40af" />
           </TouchableOpacity>
         </View>
 
@@ -230,7 +240,7 @@ export default function AIInsightsScreen() {
                     {month}
                   </ThemedText>
                   {selectedPeriod === month && (
-                    <IconSymbol name="circle" size={20} color="#0066CC" />
+                    <IconSymbol name="circle" size={20} color="#1e40af" />
                   )}
                 </TouchableOpacity>
               ))}
@@ -245,71 +255,126 @@ export default function AIInsightsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#f8fafc',
   },
   scrollView: {
     flex: 1,
-    paddingHorizontal: 20,
   },
   header: {
-    paddingTop: 20,
-    paddingBottom: 20,
+    backgroundColor: '#1e40af',
+    paddingTop: 60,
+    paddingBottom: 30,
+    paddingHorizontal: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  headerContent: {
     alignItems: 'center',
   },
+  logoWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  logoIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
-    color: '#0066CC',
+    color: 'white',
+    letterSpacing: -0.5,
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
   },
   periodSelector: {
     marginBottom: 24,
+    paddingHorizontal: 20,
   },
   periodButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    backgroundColor: '#E6F4FE',
-    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    backgroundColor: 'white',
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   periodText: {
     fontSize: 16,
-    fontWeight: '500',
-    color: '#0066CC',
-    marginHorizontal: 8,
+    fontWeight: '600',
+    color: '#1e40af',
+    marginHorizontal: 12,
   },
   overviewCard: {
-    backgroundColor: '#E6F4FE',
-    borderRadius: 16,
-    padding: 20,
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 24,
+    marginHorizontal: 20,
     marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 6,
   },
   totalSpent: {
     alignItems: 'center',
   },
   totalSpentLabel: {
-    fontSize: 14,
-    opacity: 0.7,
-    marginBottom: 8,
+    fontSize: 16,
+    color: '#64748b',
+    marginBottom: 12,
+    fontWeight: '500',
   },
   totalSpentAmount: {
-    fontSize: 32,
+    fontSize: 36,
     fontWeight: 'bold',
-    color: '#0066CC',
+    color: '#1e40af',
+    letterSpacing: -1,
   },
   categoriesSection: {
     marginBottom: 24,
+    paddingHorizontal: 20,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 16,
+    fontSize: 22,
+    fontWeight: '700',
+    marginBottom: 20,
+    color: '#1e293b',
+    letterSpacing: -0.3,
   },
   categoryItem: {
-    backgroundColor: 'rgba(0,0,0,0.05)',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
   },
   categoryInfo: {
     flexDirection: 'row',
@@ -318,11 +383,14 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   categoryName: {
-    fontSize: 16,
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1e293b',
   },
   categoryAmount: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1e40af',
   },
   categoryDetails: {
     flexDirection: 'row',
@@ -331,37 +399,41 @@ const styles = StyleSheet.create({
   },
   categoryBar: {
     flex: 1,
-    height: 6,
-    backgroundColor: 'rgba(0,0,0,0.1)',
-    borderRadius: 3,
-    marginRight: 12,
+    height: 8,
+    backgroundColor: '#f1f5f9',
+    borderRadius: 4,
+    marginRight: 16,
   },
   categoryProgress: {
-    height: 6,
-    borderRadius: 3,
+    height: 8,
+    borderRadius: 4,
   },
   categoryStats: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   categoryPercentage: {
-    fontSize: 14,
-    fontWeight: '500',
-    marginRight: 8,
+    fontSize: 16,
+    fontWeight: '600',
+    marginRight: 12,
+    color: '#1e40af',
   },
   insightsSection: {
     marginBottom: 24,
+    paddingHorizontal: 20,
   },
   insightCard: {
     backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
   },
   insightHeader: {
     flexDirection: 'row',
@@ -369,21 +441,23 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   insightIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: 16,
   },
   insightTitle: {
-    fontSize: 16,
+    fontSize: 18,
+    fontWeight: '600',
     flex: 1,
+    color: '#1e293b',
   },
   insightDescription: {
-    fontSize: 14,
-    opacity: 0.8,
-    lineHeight: 20,
+    fontSize: 16,
+    color: '#64748b',
+    lineHeight: 24,
   },
   modalOverlay: {
     flex: 1,
@@ -393,10 +467,15 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: 'white',
-    borderRadius: 16,
-    width: '80%',
+    borderRadius: 24,
+    width: '85%',
     maxHeight: '70%',
-    padding: 20,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 16,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -405,8 +484,9 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1e293b',
   },
   closeButton: {
     padding: 4,
@@ -418,19 +498,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    marginBottom: 4,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    marginBottom: 8,
   },
   selectedMonthItem: {
-    backgroundColor: '#E6F4FE',
+    backgroundColor: '#eff6ff',
+    borderWidth: 1,
+    borderColor: '#1e40af',
   },
   monthText: {
     fontSize: 16,
+    fontWeight: '500',
+    color: '#374151',
   },
   selectedMonthText: {
-    color: '#0066CC',
-    fontWeight: '600',
+    color: '#1e40af',
+    fontWeight: '700',
   },
 });
