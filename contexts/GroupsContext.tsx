@@ -19,6 +19,18 @@ export interface GroupExpense {
   category: string;
 }
 
+export interface PaymentTransaction {
+  id: string;
+  groupId: string;
+  fromUserId: string;
+  toUserId: string;
+  amount: number;
+  type: 'payment' | 'request';
+  status: 'pending' | 'completed' | 'cancelled';
+  description: string;
+  createdAt: string;
+}
+
 export interface Group {
   id: string;
   name: string;
@@ -30,15 +42,20 @@ export interface Group {
   color: string;
   createdAt: string;
   ownerId: string;
+  closed: boolean;
 }
 
 interface GroupsContextType {
   groups: Group[];
+  transactions: PaymentTransaction[];
   addGroup: (group: Omit<Group, 'id' | 'totalExpenses' | 'expenses' | 'createdAt'>) => void;
   addExpense: (groupId: string, expense: Omit<GroupExpense, 'id' | 'date'>) => void;
   updateGroup: (groupId: string, updates: Partial<Group>) => void;
   deleteGroup: (groupId: string) => void;
   getGroupById: (groupId: string) => Group | undefined;
+  settleUpGroup: (groupId: string) => void;
+  addTransaction: (transaction: Omit<PaymentTransaction, 'id' | 'createdAt'>) => void;
+  getTransactionsByGroup: (groupId: string) => PaymentTransaction[];
 }
 
 const GroupsContext = createContext<GroupsContextType | undefined>(undefined);
@@ -56,19 +73,27 @@ export const MOCK_MEMBERS: GroupMember[] = [
 ];
 
 const STORAGE_KEY = '@flik_groups';
+const TRANSACTIONS_KEY = '@flik_transactions';
 
 export const GroupsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [groups, setGroups] = useState<Group[]>([]);
+  const [transactions, setTransactions] = useState<PaymentTransaction[]>([]);
 
-  // Load groups from storage on mount
+  // Load groups and transactions from storage on mount
   useEffect(() => {
     loadGroups();
+    loadTransactions();
   }, []);
 
   // Save groups to storage whenever groups change
   useEffect(() => {
     saveGroups();
   }, [groups]);
+
+  // Save transactions to storage whenever transactions change
+  useEffect(() => {
+    saveTransactions();
+  }, [transactions]);
 
   const loadGroups = async () => {
     try {
@@ -123,6 +148,7 @@ export const GroupsProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             color: '#FF9AA2',
             createdAt: new Date().toISOString(),
             ownerId: '1',
+            closed: false,
           },
         ];
         setGroups(defaultGroups);
@@ -140,6 +166,31 @@ export const GroupsProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
   };
 
+  const loadTransactions = async () => {
+    try {
+      const storedTransactions = await AsyncStorage.getItem(TRANSACTIONS_KEY);
+      if (storedTransactions) {
+        const parsedTransactions = JSON.parse(storedTransactions);
+        console.log('Loaded transactions from storage:', parsedTransactions);
+        setTransactions(parsedTransactions);
+      } else {
+        console.log('No stored transactions found');
+      }
+    } catch (error) {
+      console.error('Error loading transactions:', error);
+    }
+  };
+
+  const saveTransactions = async () => {
+    try {
+      console.log('Saving transactions to storage:', transactions);
+      await AsyncStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(transactions));
+      console.log('Transactions saved successfully');
+    } catch (error) {
+      console.error('Error saving transactions:', error);
+    }
+  };
+
   const addGroup = (groupData: Omit<Group, 'id' | 'totalExpenses' | 'expenses' | 'createdAt'>) => {
     const newGroup: Group = {
       ...groupData,
@@ -147,6 +198,7 @@ export const GroupsProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       totalExpenses: 0,
       expenses: [],
       createdAt: new Date().toISOString(),
+      closed: false,
     };
     setGroups(prev => [...prev, newGroup]);
   };
@@ -204,13 +256,96 @@ export const GroupsProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     return groups.find(group => group.id === groupId);
   };
 
+  const settleUpGroup = (groupId: string) => {
+    const group = groups.find(g => g.id === groupId);
+    if (!group) return;
+
+    const ownerId = group.ownerId;
+    const newTransactions: PaymentTransaction[] = [];
+
+    // Create transactions for each member based on their balance
+    group.members.forEach(member => {
+      if (member.balance !== 0 && member.id !== ownerId) { // Don't create transactions for the owner
+        if (member.balance > 0) {
+          // Member is owed money - create payment transaction from owner to member
+          newTransactions.push({
+            id: Date.now().toString() + '_' + member.id,
+            groupId: groupId,
+            fromUserId: ownerId,
+            toUserId: member.id,
+            amount: Math.abs(member.balance),
+            type: 'payment',
+            status: 'completed',
+            description: `Poravnava dolga za skupino ${group.name}`,
+            createdAt: new Date().toISOString(),
+          });
+        } else {
+          // Member owes money - create request transaction from member to owner
+          newTransactions.push({
+            id: Date.now().toString() + '_' + member.id,
+            groupId: groupId,
+            fromUserId: member.id,
+            toUserId: ownerId,
+            amount: Math.abs(member.balance),
+            type: 'request',
+            status: 'pending',
+            description: `Zahteva za plačilo dolga za skupino ${group.name}`,
+            createdAt: new Date().toISOString(),
+          });
+        }
+      }
+    });
+
+    // Add all transactions
+    setTransactions(prev => [...prev, ...newTransactions]);
+
+    // Reset all member balances to 0 and mark group as closed
+    setGroups(prev => prev.map(g => {
+      if (g.id === groupId) {
+        const settledMembers = g.members.map(member => ({
+          ...member,
+          balance: 0
+        }));
+        
+        return {
+          ...g,
+          members: settledMembers,
+          closed: true
+        };
+      }
+      return g;
+    }));
+  };
+
+  const addTransaction = (transactionData: Omit<PaymentTransaction, 'id' | 'createdAt'>) => {
+    const newTransaction: PaymentTransaction = {
+      ...transactionData,
+      id: Date.now().toString(),
+      createdAt: new Date().toISOString(),
+    };
+    console.log('Adding transaction to context:', newTransaction);
+    setTransactions(prev => {
+      const updated = [...prev, newTransaction];
+      console.log('Updated transactions array:', updated);
+      return updated;
+    });
+  };
+
+  const getTransactionsByGroup = (groupId: string) => {
+    return transactions.filter(transaction => transaction.groupId === groupId);
+  };
+
   const value: GroupsContextType = {
     groups,
+    transactions,
     addGroup,
     addExpense,
     updateGroup,
     deleteGroup,
     getGroupById,
+    settleUpGroup,
+    addTransaction,
+    getTransactionsByGroup,
   };
 
   return (

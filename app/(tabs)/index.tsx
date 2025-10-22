@@ -2,6 +2,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
+import { MOCK_MEMBERS, useGroups } from '@/contexts/GroupsContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Link, router } from 'expo-router';
 import React, { useState } from 'react';
@@ -9,23 +10,226 @@ import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export default function HomeScreen() {
   const colorScheme = useColorScheme();
+  const { transactions, groups } = useGroups();
   const [balance] = useState(1250.75);
   const [currentLanguage, setCurrentLanguage] = useState('SI');
-  const [pendingRequests] = useState([
-    { id: 'p1', name: 'ALJAŽ V.', amount: 15.75, description: 'Za kino', type: 'incoming' },
-    { id: 'p2', name: 'MARTA K.', amount: 45.30, description: 'Za skupni obrok', type: 'outgoing' },
-  ]);
-  const [recentTransactions] = useState([
-    { id: '1', name: 'ALJAŽ V.', amount: 25.50, description: 'Za kosilo', type: 'sent' },
-    { id: '2', name: 'MARTA K.', amount: 45.30, description: 'Sporočilo', type: 'received' },
-    { id: '3', name: 'PETRA M.', amount: 87.25, description: 'Hotelski račun', type: 'expense', group: 'Potovanje v Italijo' },
-  ]);
+  
+  // Force re-render when transactions change
+  const [refreshKey, setRefreshKey] = useState(0);
+  
+  React.useEffect(() => {
+    setRefreshKey(prev => prev + 1);
+  }, [transactions]);
+  
+  // Combine static pending requests with settle up transactions
+  const staticPendingRequests = [
+    { 
+      id: 'p1', 
+      name: 'ALJAŽ V.', 
+      amount: 15.75, 
+      description: 'Za kino', 
+      type: 'incoming',
+      createdAt: new Date(Date.now() - 30 * 60 * 1000).toISOString() // 30 minut nazaj
+    },
+    { 
+      id: 'p2', 
+      name: 'MARTA K.', 
+      amount: 45.30, 
+      description: 'Za skupni obrok', 
+      type: 'outgoing',
+      createdAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString() // 1 ura nazaj
+    },
+    { 
+      id: 'p3', 
+      name: 'PETRA M.', 
+      amount: 25.00, 
+      description: 'Za benzin', 
+      type: 'incoming',
+      createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString() // 2 uri nazaj
+    },
+    { 
+      id: 'p4', 
+      name: 'MIHA M.', 
+      amount: 12.50, 
+      description: 'Za kavo', 
+      type: 'outgoing',
+      createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString() // 3 ure nazaj
+    },
+    { 
+      id: 'p5', 
+      name: 'ANA S.', 
+      amount: 35.80, 
+      description: 'Za kosilo', 
+      type: 'incoming',
+      createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString() // 4 ure nazaj
+    },
+    { 
+      id: 'p6', 
+      name: 'MARKO P.', 
+      amount: 18.90, 
+      description: 'Za parkiranje', 
+      type: 'outgoing',
+      createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString() // 5 ur nazaj
+    },
+  ];
+  
+  // Convert settle up transactions to pending requests format
+  const settleUpRequests = transactions
+    .filter(t => t.status === 'pending' && t.type === 'request')
+    .map(t => {
+      const group = groups.find(g => g.id === t.groupId);
+      const fromMember = group?.members.find(m => m.id === t.fromUserId);
+      const toMember = group?.members.find(m => m.id === t.toUserId);
+      
+      // For individual transactions, use MOCK_MEMBERS
+      const fromMemberIndividual = t.groupId === 'individual' ? MOCK_MEMBERS.find(m => m.id === t.fromUserId) : fromMember;
+      const toMemberIndividual = t.groupId === 'individual' ? MOCK_MEMBERS.find(m => m.id === t.toUserId) : toMember;
+      
+      // Check if Janez is the one who owes money (fromUserId) or is owed money (toUserId)
+      const isJanezOwing = t.fromUserId === '1'; // Assuming Janez has ID '1'
+      const isJanezOwed = t.toUserId === '1';
+      
+      return {
+        id: t.id,
+        name: isJanezOwing ? (toMemberIndividual?.name || 'Neznan uporabnik') : (fromMemberIndividual?.name || 'Neznan uporabnik'),
+        amount: t.amount,
+        description: t.description,
+        type: isJanezOwing ? 'outgoing' as const : 'incoming' as const, // Janez owes = outgoing (red), Janez is owed = incoming (green)
+        isSettleUp: t.groupId !== 'individual',
+        isJanezOwing,
+        isJanezOwed,
+        createdAt: t.createdAt,
+      };
+    });
+  
+  const pendingRequests = [...staticPendingRequests, ...settleUpRequests];
+  
+  // Debug logging
+  console.log('All transactions:', transactions);
+  console.log('Settle up requests:', settleUpRequests);
+  console.log('Pending requests:', pendingRequests);
+  
+  // Combine static recent transactions with completed settle up transactions
+  const staticRecentTransactions = [
+    { 
+      id: '1', 
+      name: 'ALJAŽ V.', 
+      amount: 25.50, 
+      description: 'Za kosilo', 
+      type: 'sent',
+      createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString() // 2 uri nazaj
+    },
+    { 
+      id: '2', 
+      name: 'MARTA K.', 
+      amount: 45.30, 
+      description: 'Sporočilo', 
+      type: 'received',
+      createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString() // 5 ur nazaj
+    },
+    { 
+      id: '3', 
+      name: 'PETRA M.', 
+      amount: 87.25, 
+      description: 'Hotelski račun', 
+      type: 'expense', 
+      group: 'Potovanje v Italijo',
+      createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString() // 1 dan nazaj
+    },
+    { 
+      id: '4', 
+      name: 'MIHA M.', 
+      amount: 15.75, 
+      description: 'Za kino', 
+      type: 'sent',
+      createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString() // 2 dni nazaj
+    },
+    { 
+      id: '5', 
+      name: 'ANA S.', 
+      amount: 32.40, 
+      description: 'Za benzin', 
+      type: 'received',
+      createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString() // 3 dni nazaj
+    },
+    { 
+      id: '6', 
+      name: 'MARKO P.', 
+      amount: 18.90, 
+      description: 'Za parkiranje', 
+      type: 'expense',
+      group: 'Mestni izlet',
+      createdAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString() // 4 dni nazaj
+    },
+    { 
+      id: '7', 
+      name: 'LARA T.', 
+      amount: 55.60, 
+      description: 'Za večerjo', 
+      type: 'sent',
+      createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString() // 5 dni nazaj
+    },
+  ];
+  
+  // Convert completed settle up transactions to recent transactions format
+  const settleUpRecentTransactions = transactions
+    .filter(t => t.status === 'completed' && t.type === 'payment')
+    .map(t => {
+      const group = groups.find(g => g.id === t.groupId);
+      const fromMember = group?.members.find(m => m.id === t.fromUserId);
+      const toMember = group?.members.find(m => m.id === t.toUserId);
+      
+      // For individual transactions, use MOCK_MEMBERS
+      const fromMemberIndividual = t.groupId === 'individual' ? MOCK_MEMBERS.find(m => m.id === t.fromUserId) : fromMember;
+      const toMemberIndividual = t.groupId === 'individual' ? MOCK_MEMBERS.find(m => m.id === t.toUserId) : toMember;
+      
+      // Check if Janez was the one who paid (fromUserId) or received payment (toUserId)
+      const isJanezPaid = t.fromUserId === '1'; // Janez paid someone
+      const isJanezReceived = t.toUserId === '1'; // Janez received payment
+      
+      return {
+        id: t.id,
+        name: isJanezPaid ? (toMemberIndividual?.name || 'Neznan uporabnik') : (fromMemberIndividual?.name || 'Neznan uporabnik'),
+        amount: t.amount,
+        description: t.description,
+        type: isJanezPaid ? 'sent' as const : 'received' as const, // Janez paid = sent (red), Janez received = received (green)
+        group: t.groupId === 'individual' ? undefined : group?.name,
+        isSettleUp: t.groupId !== 'individual',
+        isJanezPaid,
+        isJanezReceived,
+        createdAt: t.createdAt,
+      };
+    });
+  
+  const recentTransactions = [...staticRecentTransactions, ...settleUpRecentTransactions];
 
   const formatAmount = (amount: number) => {
     return `${amount.toFixed(2)} EUR`;
   };
 
-  const getTransactionIcon = (type: string, group?: string) => {
+  const formatSlovenianDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('sl-SI', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const getTransactionIcon = (type: string, group?: string, isSettleUp?: boolean, isJanezOwing?: boolean, isJanezPaid?: boolean) => {
+    // Use settle up icon if it's a settle up transaction
+    if (isSettleUp) {
+      if (isJanezOwing !== undefined) {
+        return isJanezOwing ? 'arrow.up.right' : 'arrow.down.left'; // For pending requests
+      }
+      if (isJanezPaid !== undefined) {
+        return isJanezPaid ? 'arrow.up.right' : 'arrow.down.left'; // For recent transactions
+      }
+      return 'checkmark.circle'; // Fallback
+    }
+    
     // Use group icon if transaction is part of a group
     if (group) {
       return 'person.3.fill';
@@ -63,7 +267,7 @@ export default function HomeScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView key={refreshKey} style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerTop}>
@@ -140,15 +344,20 @@ export default function HomeScreen() {
           <View style={styles.pendingRequests}>
             <View style={styles.pendingHeader}>
               <ThemedText type="subtitle" style={styles.sectionTitle}>
-                Čakajoči zahtevki
+                Čakajoči zahtevki ({pendingRequests.length})
               </ThemedText>
+              <Link href="/transactions?filter=pending" asChild>
+                <TouchableOpacity>
+                  <ThemedText style={styles.seeAllText}>Prikaži vse</ThemedText>
+                </TouchableOpacity>
+              </Link>
             </View>
             
-            {pendingRequests.map((request) => (
+            {pendingRequests.slice(0, 5).map((request) => (
               <TouchableOpacity key={request.id} style={styles.requestItem}>
                 <View style={styles.transactionIcon}>
                   <IconSymbol
-                    name={getTransactionIcon(request.type)}
+                  name={getTransactionIcon(request.type, undefined, (request as any).isSettleUp, (request as any).isJanezOwing)}
                     size={20}
                     color={getTransactionColor(request.type)}
                   />
@@ -160,6 +369,11 @@ export default function HomeScreen() {
                   <ThemedText style={styles.transactionDescription}>
                     {request.description}
                   </ThemedText>
+                  {(request as any).createdAt && (
+                    <ThemedText style={styles.transactionTime}>
+                      {formatSlovenianDate((request as any).createdAt)}
+                    </ThemedText>
+                  )}
                 </View>
                 <View style={styles.requestActions}>
                   <ThemedText
@@ -171,14 +385,14 @@ export default function HomeScreen() {
                   >
                     {request.type === 'incoming' ? '+' : '-'}{formatAmount(request.amount)}
                   </ThemedText>
-                  {request.type === 'incoming' && (
+                  {request.type === 'outgoing' && (
                     <View style={styles.requestButtons}>
                       <TouchableOpacity style={styles.requestPayButton}>
                         <ThemedText style={styles.requestPayButtonText}>Plačaj</ThemedText>
                       </TouchableOpacity>
                     </View>
                   )}
-                  {request.type === 'outgoing' && (
+                  {request.type === 'incoming' && (
                     <View style={styles.requestButtons}>
                       <TouchableOpacity style={styles.remindButton}>
                         <ThemedText style={styles.remindButtonText}>Opomni</ThemedText>
@@ -197,18 +411,18 @@ export default function HomeScreen() {
             <ThemedText type="subtitle" style={styles.sectionTitle}>
               Zadnje transakcije
             </ThemedText>
-            <Link href="/transactions" asChild>
+            <Link href="/transactions?filter=completed" asChild>
               <TouchableOpacity>
                 <ThemedText style={styles.seeAllText}>Prikaži vse</ThemedText>
               </TouchableOpacity>
             </Link>
           </View>
           
-          {recentTransactions.map((transaction) => (
+          {recentTransactions.slice(0, 5).map((transaction) => (
             <TouchableOpacity key={transaction.id} style={styles.transactionItem}>
               <View style={styles.transactionIcon}>
                 <IconSymbol
-                  name={getTransactionIcon(transaction.type, transaction.group)}
+                  name={getTransactionIcon(transaction.type, transaction.group, (transaction as any).isSettleUp, undefined, (transaction as any).isJanezPaid)}
                   size={20}
                   color={getTransactionColor(transaction.type)}
                 />
@@ -225,6 +439,11 @@ export default function HomeScreen() {
                     {transaction.group}
                   </ThemedText>
                 )}
+                {(transaction as any).createdAt && (
+                  <ThemedText style={styles.transactionTime}>
+                    {formatSlovenianDate((transaction as any).createdAt)}
+                  </ThemedText>
+                )}
               </View>
               <ThemedText
                 type="defaultSemiBold"
@@ -239,6 +458,7 @@ export default function HomeScreen() {
             </TouchableOpacity>
           ))}
         </View>
+
       </ScrollView>
     </ThemedView>
   );
@@ -478,6 +698,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     opacity: 0.6,
     fontStyle: 'italic',
+  },
+  transactionTime: {
+    fontSize: 11,
+    opacity: 0.5,
+    marginTop: 2,
   },
   transactionAmount: {
     fontSize: 15,

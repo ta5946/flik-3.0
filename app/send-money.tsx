@@ -2,6 +2,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
+import { MOCK_MEMBERS, useGroups } from '@/contexts/GroupsContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
@@ -9,28 +10,57 @@ import { Alert, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from
 
 export default function SendMoneyScreen() {
   const colorScheme = useColorScheme();
+  const { addTransaction } = useGroups();
   const [amount, setAmount] = useState('7,20');
   const [message, setMessage] = useState('Za kosilo.');
-  const [recipient] = useState({
-    name: 'ALJAŽ V.',
-    phone: '+386 40 102 030',
-  });
+  const [selectedContact, setSelectedContact] = useState(null);
+  const [showContactList, setShowContactList] = useState(false);
 
   const handleSend = () => {
+    if (!selectedContact) {
+      Alert.alert('Napaka', 'Prosimo, izberite prejemnika.');
+      return;
+    }
+
+    const amountValue = parseFloat(amount.replace(',', '.'));
+    if (isNaN(amountValue) || amountValue <= 0) {
+      Alert.alert('Napaka', 'Prosimo, vnesite veljaven znesek.');
+      return;
+    }
+
     Alert.alert(
       'Potrditev plačila',
-      `Ali želite poslati ${amount} EUR ${recipient.name}?`,
+      `Ali želite poslati ${amount} EUR ${selectedContact.name}?`,
       [
         { text: 'Prekliči', style: 'cancel' },
         { 
           text: 'Pošlji', 
           onPress: () => {
-            // Navigate to confirmation screen
-            router.push('/payment-confirmation');
+            // Create individual transaction
+            const transactionData = {
+              groupId: 'individual', // Special group ID for individual transactions
+              fromUserId: '1', // Janez is the sender
+              toUserId: selectedContact.id,
+              amount: amountValue,
+              type: 'payment' as const,
+              status: 'completed' as const,
+              description: message || `Plačilo ${selectedContact.name}`,
+            };
+            
+            console.log('Creating transaction:', transactionData);
+            addTransaction(transactionData);
+            
+            Alert.alert('Uspeh', 'Plačilo je bilo poslano!');
+            router.back();
           }
         },
       ]
     );
+  };
+
+  const selectContact = (contact) => {
+    setSelectedContact(contact);
+    setShowContactList(false);
   };
 
   return (
@@ -47,20 +77,76 @@ export default function SendMoneyScreen() {
           <View style={styles.placeholder} />
         </View>
 
-        {/* Recipient Info */}
+        {/* Recipient Selection */}
         <View style={styles.recipientSection}>
-          <View style={styles.recipientIcon}>
-            <IconSymbol name="arrow.up.right" size={32} color={Colors[colorScheme ?? 'light'].primary} />
-          </View>
-          <View style={styles.recipientInfo}>
-            <ThemedText type="subtitle" style={styles.recipientName}>
-              {recipient.name}
-            </ThemedText>
-            <ThemedText style={styles.recipientPhone}>
-              {recipient.phone}
-            </ThemedText>
-          </View>
+          <TouchableOpacity 
+            style={styles.recipientSelector}
+            onPress={() => setShowContactList(!showContactList)}
+          >
+            <View style={styles.recipientIcon}>
+              <IconSymbol name="arrow.up.right" size={32} color={Colors[colorScheme ?? 'light'].primary} />
+            </View>
+            <View style={styles.recipientInfo}>
+              {selectedContact ? (
+                <>
+                  <ThemedText type="subtitle" style={styles.recipientName}>
+                    {selectedContact.name}
+                  </ThemedText>
+                  <ThemedText style={styles.recipientPhone}>
+                    {selectedContact.phone}
+                  </ThemedText>
+                </>
+              ) : (
+                <>
+                  <ThemedText type="subtitle" style={styles.recipientName}>
+                    Izberite prejemnika
+                  </ThemedText>
+                  <ThemedText style={styles.recipientPhone}>
+                    Tapnite za izbiro
+                  </ThemedText>
+                </>
+              )}
+            </View>
+            <IconSymbol 
+              name={showContactList ? "chevron.up" : "chevron.down"} 
+              size={20} 
+              color={Colors[colorScheme ?? 'light'].icon} 
+            />
+          </TouchableOpacity>
         </View>
+
+        {/* Contact List */}
+        {showContactList && (
+          <View style={styles.contactList}>
+            {MOCK_MEMBERS.filter(member => member.id !== '1').map((contact) => (
+              <TouchableOpacity
+                key={contact.id}
+                style={[
+                  styles.contactItem,
+                  selectedContact?.id === contact.id && { backgroundColor: Colors[colorScheme ?? 'light'].secondary },
+                ]}
+                onPress={() => selectContact(contact)}
+              >
+                <View style={styles.contactAvatar}>
+                  <ThemedText style={styles.contactInitial}>
+                    {contact.name.charAt(0)}
+                  </ThemedText>
+                </View>
+                <View style={styles.contactInfo}>
+                  <ThemedText type="defaultSemiBold" style={styles.contactName}>
+                    {contact.name}
+                  </ThemedText>
+                  <ThemedText style={styles.contactPhone}>
+                    {contact.phone}
+                  </ThemedText>
+                </View>
+                {selectedContact?.id === contact.id && (
+                  <IconSymbol name="checkmark.circle.fill" size={24} color={Colors[colorScheme ?? 'light'].success} />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
 
         {/* Payment Form */}
         <View style={styles.paymentForm}>
@@ -110,37 +196,45 @@ export default function SendMoneyScreen() {
         </View>
 
         {/* Payment Summary */}
-        <View style={styles.paymentSummary}>
-          <View style={styles.summaryRow}>
-            <ThemedText style={styles.summaryLabel}>Prejemnik:</ThemedText>
-            <ThemedText type="defaultSemiBold" style={styles.summaryValue}>
-              {recipient.name}
-            </ThemedText>
+        {selectedContact && (
+          <View style={styles.paymentSummary}>
+            <View style={styles.summaryRow}>
+              <ThemedText style={styles.summaryLabel}>Prejemnik:</ThemedText>
+              <ThemedText type="defaultSemiBold" style={styles.summaryValue}>
+                {selectedContact.name}
+              </ThemedText>
+            </View>
+            <View style={styles.summaryRow}>
+              <ThemedText style={styles.summaryLabel}>Znesek:</ThemedText>
+              <ThemedText type="defaultSemiBold" style={styles.summaryValue}>
+                {amount} EUR
+              </ThemedText>
+            </View>
+            <View style={styles.summaryRow}>
+              <ThemedText style={styles.summaryLabel}>Provizija:</ThemedText>
+              <ThemedText type="defaultSemiBold" style={styles.summaryValue}>
+                0,00 EUR
+              </ThemedText>
+            </View>
+            <View style={[styles.summaryRow, styles.totalRow]}>
+              <ThemedText type="defaultSemiBold" style={styles.totalLabel}>Skupaj:</ThemedText>
+              <ThemedText type="defaultSemiBold" style={styles.totalValue}>
+                {amount} EUR
+              </ThemedText>
+            </View>
           </View>
-          <View style={styles.summaryRow}>
-            <ThemedText style={styles.summaryLabel}>Znesek:</ThemedText>
-            <ThemedText type="defaultSemiBold" style={styles.summaryValue}>
-              {amount} EUR
-            </ThemedText>
-          </View>
-          <View style={styles.summaryRow}>
-            <ThemedText style={styles.summaryLabel}>Provizija:</ThemedText>
-            <ThemedText type="defaultSemiBold" style={styles.summaryValue}>
-              0,00 EUR
-            </ThemedText>
-          </View>
-          <View style={[styles.summaryRow, styles.totalRow]}>
-            <ThemedText type="defaultSemiBold" style={styles.totalLabel}>Skupaj:</ThemedText>
-            <ThemedText type="defaultSemiBold" style={styles.totalValue}>
-              {amount} EUR
-            </ThemedText>
-          </View>
-        </View>
+        )}
 
         {/* Send Button */}
         <TouchableOpacity
-          style={[styles.sendButton, { backgroundColor: Colors[colorScheme ?? 'light'].primary }]}
+          style={[
+            styles.sendButton, 
+            { 
+              backgroundColor: selectedContact ? Colors[colorScheme ?? 'light'].primary : Colors[colorScheme ?? 'light'].icon 
+            }
+          ]}
           onPress={handleSend}
+          disabled={!selectedContact}
         >
           <ThemedText style={styles.sendButtonText}>POŠLJI</ThemedText>
         </TouchableOpacity>
@@ -183,13 +277,49 @@ const styles = StyleSheet.create({
     width: 40,
   },
   recipientSection: {
+    marginBottom: 24,
+  },
+  recipientSelector: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 20,
     paddingHorizontal: 16,
     backgroundColor: 'rgba(0,0,0,0.05)',
     borderRadius: 16,
-    marginBottom: 24,
+  },
+  contactList: {
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  contactItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    marginBottom: 8,
+  },
+  contactAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#0066CC',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  contactInitial: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  contactName: {
+    fontSize: 16,
+    marginBottom: 2,
+  },
+  contactPhone: {
+    fontSize: 14,
+    opacity: 0.7,
   },
   recipientIcon: {
     width: 60,

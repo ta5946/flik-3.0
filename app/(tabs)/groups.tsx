@@ -39,14 +39,23 @@ export default function GroupsScreen() {
                   styles.groupCard,
                   { backgroundColor: Colors[colorScheme ?? 'light'].background },
                   { borderLeftColor: group.color },
+                  group.closed && styles.closedGroupCard,
                 ]}
                 onPress={() => router.push(`/group-detail?id=${group.id}`)}
               >
                 <View style={styles.groupHeader}>
                   <View style={styles.groupInfo}>
-                    <ThemedText type="subtitle" style={styles.groupName}>
-                      {group.name}
-                    </ThemedText>
+                    <View style={styles.groupNameRow}>
+                      <ThemedText type="subtitle" style={styles.groupName}>
+                        {group.name}
+                      </ThemedText>
+                      {group.closed && (
+                        <View style={styles.closedBadge}>
+                          <IconSymbol name="checkmark.circle.fill" size={12} color="white" />
+                          <ThemedText style={styles.closedBadgeText}>ZAPRTA</ThemedText>
+                        </View>
+                      )}
+                    </View>
                     <ThemedText style={styles.memberCount}>
                       {group.members.length} članov
                     </ThemedText>
@@ -134,14 +143,23 @@ export default function GroupsScreen() {
                   styles.groupCard,
                   { backgroundColor: Colors[colorScheme ?? 'light'].background },
                   { borderLeftColor: group.color },
+                  group.closed && styles.closedGroupCard,
                 ]}
                 onPress={() => router.push(`/group-detail?id=${group.id}`)}
               >
                 <View style={styles.groupHeader}>
                   <View style={styles.groupInfo}>
-                    <ThemedText type="subtitle" style={styles.groupName}>
-                      {group.name}
-                    </ThemedText>
+                    <View style={styles.groupNameRow}>
+                      <ThemedText type="subtitle" style={styles.groupName}>
+                        {group.name}
+                      </ThemedText>
+                      {group.closed && (
+                        <View style={styles.closedBadge}>
+                          <IconSymbol name="checkmark.circle.fill" size={12} color="white" />
+                          <ThemedText style={styles.closedBadgeText}>ZAPRTA</ThemedText>
+                        </View>
+                      )}
+                    </View>
                     <ThemedText style={styles.memberCount}>
                       {group.members.length} članov
                     </ThemedText>
@@ -278,6 +296,37 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     marginBottom: 2,
+  },
+  groupNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  closedBadge: {
+    backgroundColor: '#10B981',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginLeft: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  closedBadgeText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: '700',
+    marginLeft: 4,
+    letterSpacing: 0.5,
+  },
+  closedGroupCard: {
+    opacity: 0.7,
+    borderColor: '#10B981',
+    borderWidth: 1,
   },
   memberCount: {
     fontSize: 12,

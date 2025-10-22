@@ -5,12 +5,12 @@ import { Colors } from '@/constants/theme';
 import { GroupExpense, GroupMember, useGroups } from '@/contexts/GroupsContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useMemo, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Alert, Modal, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function GroupDetailScreen() {
   const colorScheme = useColorScheme();
-  const { getGroupById, addExpense } = useGroups();
+  const { getGroupById, addExpense, settleUpGroup, getTransactionsByGroup, groups } = useGroups();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [showAddExpense, setShowAddExpense] = useState(false);
   const [showStats, setShowStats] = useState(false);
@@ -24,8 +24,17 @@ export default function GroupDetailScreen() {
   const [splitMode, setSplitMode] = useState<'equal' | 'shares' | 'percentage'>('equal');
   const [memberShares, setMemberShares] = useState<Record<string, number>>({});
   const [memberPercentages, setMemberPercentages] = useState<Record<string, number>>({});
+  const [isGroupClosed, setIsGroupClosed] = useState(false);
+  const [showSettleUpModal, setShowSettleUpModal] = useState(false);
 
   const groupData = getGroupById(id || '1');
+  
+  // Update local state when group data changes
+  useEffect(() => {
+    if (groupData) {
+      setIsGroupClosed(groupData.closed || false);
+    }
+  }, [groupData]);
 
   if (!groupData) {
     return (
@@ -46,6 +55,12 @@ export default function GroupDetailScreen() {
   const ownerName = useMemo(() => {
     const owner = groupData.members.find(m => m.id === groupData.ownerId);
     return owner?.name ?? groupData.members[0]?.name ?? '';
+  }, [groupData]);
+
+  // Check if current user is the owner (simplified - using first member as current user)
+  // For demo purposes, let's make the first member always be the owner
+  const isOwner = useMemo(() => {
+    return true; // Always show settle up button for demo
   }, [groupData]);
 
   // Ensure sensible defaults when opening the form
@@ -159,6 +174,31 @@ export default function GroupDetailScreen() {
     });
     setMemberShares({});
     setMemberPercentages({});
+  };
+
+  const handleSettleUp = () => {
+    console.log('handleSettleUp called');
+    Alert.alert(
+      'Poravnaj skupino',
+      'Ali ste prepričani, da želite poravnati vse dolgove v tej skupini? To bo poslalo zahtevke za plačilo in označilo skupino kot zaprta.',
+      [
+        { text: 'Prekliči', style: 'cancel' },
+        { 
+          text: 'Poravnaj', 
+          style: 'default', 
+          onPress: () => {
+            console.log('Settle up confirmed');
+            // Update local state immediately
+            setIsGroupClosed(true);
+            
+            // Call the context function
+            settleUpGroup(groupData.id);
+            
+            Alert.alert('Uspeh', 'Skupina je bila uspešno poravnana in označena kot zaprta!');
+          }
+        },
+      ]
+    );
   };
 
   const renderMember = (member: GroupMember) => (
@@ -276,11 +316,21 @@ export default function GroupDetailScreen() {
         {/* Quick Actions */}
         <View style={styles.quickActions}>
           <TouchableOpacity 
-            style={[styles.actionButton, { backgroundColor: Colors[colorScheme ?? 'light'].primary }]}
-            onPress={openAddExpense}
+            style={[
+              styles.actionButton, 
+              { 
+                backgroundColor: isGroupClosed 
+                  ? Colors[colorScheme ?? 'light'].icon 
+                  : Colors[colorScheme ?? 'light'].primary 
+              }
+            ]}
+            onPress={isGroupClosed ? undefined : openAddExpense}
+            disabled={isGroupClosed}
           >
             <IconSymbol name="plus" size={20} color="white" />
-            <ThemedText style={styles.actionButtonText}>Dodaj strošek</ThemedText>
+            <ThemedText style={styles.actionButtonText}>
+              {isGroupClosed ? 'Skupina zaprta' : 'Dodaj strošek'}
+            </ThemedText>
           </TouchableOpacity>
           <TouchableOpacity 
             style={[styles.actionButton, { backgroundColor: Colors[colorScheme ?? 'light'].secondary }]}
@@ -293,55 +343,180 @@ export default function GroupDetailScreen() {
           </TouchableOpacity>
         </View>
 
+
+        {/* Settle Up Button - Always visible for testing */}
+        {!isGroupClosed && (
+          <View style={styles.settleUpSection}>
+            <TouchableOpacity 
+              style={[styles.settleUpButton, { backgroundColor: Colors[colorScheme ?? 'light'].success }]}
+              onPress={() => {
+                setShowSettleUpModal(true);
+              }}
+            >
+              <IconSymbol name="checkmark.circle" size={20} color="white" />
+              <ThemedText style={styles.settleUpButtonText}>Poravnaj skupino</ThemedText>
+            </TouchableOpacity>
+            <ThemedText style={styles.settleUpDescription}>
+              Pošlje zahtevke za plačilo in označi skupino kot zaprto
+            </ThemedText>
+          </View>
+        )}
+
+        {/* Closed Group Notice */}
+        {isGroupClosed && (
+          <View style={styles.closedGroupNotice}>
+            <IconSymbol name="checkmark.circle.fill" size={24} color={Colors[colorScheme ?? 'light'].success} />
+            <ThemedText style={styles.closedGroupText}>
+              Ta skupina je bila poravnana in zaprta
+            </ThemedText>
+          </View>
+        )}
+
         {/* Statistics Section */}
         {showStats && (
           <View style={styles.statsSection}>
             <ThemedText type="subtitle" style={styles.sectionTitle}>Statistike</ThemedText>
 
-            {/* Per-member balances */}
-            <View style={styles.statsCard}>
-              <ThemedText style={styles.statHeader}>Stanja po članih</ThemedText>
-              {groupData.members.map(m => (
-                <View key={m.id} style={styles.statRow}>
-                  <ThemedText style={styles.statRowName}>{m.name}</ThemedText>
-                  <ThemedText style={[styles.statRowValue, { color: getBalanceColor(m.balance) }]}>
-                    {m.balance > 0 ? '+' : ''}{formatAmount(m.balance)}
-                  </ThemedText>
-                </View>
-              ))}
+            {/* Summary Cards */}
+            <View style={styles.summaryCards}>
+              <View style={styles.summaryCard}>
+                <ThemedText style={styles.summaryLabel}>Skupni stroški</ThemedText>
+                <ThemedText style={styles.summaryValue}>{formatAmount(groupData.totalExpenses)}</ThemedText>
+              </View>
+              <View style={styles.summaryCard}>
+                <ThemedText style={styles.summaryLabel}>Število stroškov</ThemedText>
+                <ThemedText style={styles.summaryValue}>{groupData.expenses.length}</ThemedText>
+              </View>
+              <View style={styles.summaryCard}>
+                <ThemedText style={styles.summaryLabel}>Povprečje</ThemedText>
+                <ThemedText style={styles.summaryValue}>
+                  {formatAmount(groupData.expenses.length > 0 ? groupData.totalExpenses / groupData.expenses.length : 0)}
+                </ThemedText>
+              </View>
             </View>
 
-            {/* Category breakdown */}
+            {/* Per-member balances with visual bars */}
+            <View style={styles.statsCard}>
+              <ThemedText style={styles.statHeader}>Stanja po članih</ThemedText>
+              {groupData.members.map(m => {
+                const maxBalance = Math.max(...groupData.members.map(mem => Math.abs(mem.balance)));
+                const barWidth = maxBalance > 0 ? (Math.abs(m.balance) / maxBalance) * 100 : 0;
+                return (
+                  <View key={m.id} style={styles.memberBalanceRow}>
+                    <View style={styles.memberBalanceInfo}>
+                      <ThemedText style={styles.statRowName}>{m.name}</ThemedText>
+                      <ThemedText style={[styles.statRowValue, { color: getBalanceColor(m.balance) }]}>
+                        {m.balance > 0 ? '+' : ''}{formatAmount(m.balance)}
+                      </ThemedText>
+                    </View>
+                    <View style={styles.balanceBarContainer}>
+                      <View 
+                        style={[
+                          styles.balanceBar, 
+                          { 
+                            width: `${barWidth}%`,
+                            backgroundColor: m.balance > 0 ? '#4CAF50' : '#F44336'
+                          }
+                        ]} 
+                      />
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+
+            {/* Category breakdown with visual representation */}
             <View style={styles.statsCard}>
               <ThemedText style={styles.statHeader}>Po kategorijah</ThemedText>
               {['food','accommodation','transport','entertainment','other'].map(cat => {
                 const total = groupData.expenses
                   .filter(e => (['food','accommodation','transport','entertainment'].includes(e.category) ? e.category : 'other') === cat)
                   .reduce((sum, e) => sum + e.amount, 0);
+                const maxCategory = Math.max(...['food','accommodation','transport','entertainment','other'].map(c => 
+                  groupData.expenses
+                    .filter(e => (['food','accommodation','transport','entertainment'].includes(e.category) ? e.category : 'other') === c)
+                    .reduce((sum, e) => sum + e.amount, 0)
+                ));
+                const barWidth = maxCategory > 0 ? (total / maxCategory) * 100 : 0;
+                const categoryNames = {
+                  food: 'Hrana',
+                  accommodation: 'Nastanitev', 
+                  transport: 'Prevoz',
+                  entertainment: 'Zabava',
+                  other: 'Ostalo'
+                };
                 return (
-                  <View key={cat} style={styles.statRow}>
-                    <ThemedText style={styles.statRowName}>{cat}</ThemedText>
-                    <ThemedText style={styles.statRowValue}>{formatAmount(total)}</ThemedText>
+                  <View key={cat} style={styles.categoryRow}>
+                    <View style={styles.categoryInfo}>
+                      <ThemedText style={styles.statRowName}>{categoryNames[cat as keyof typeof categoryNames]}</ThemedText>
+                      <ThemedText style={styles.statRowValue}>{formatAmount(total)}</ThemedText>
+                    </View>
+                    <View style={styles.categoryBarContainer}>
+                      <View 
+                        style={[
+                          styles.categoryBar, 
+                          { 
+                            width: `${barWidth}%`,
+                            backgroundColor: Colors[colorScheme ?? 'light'].primary
+                          }
+                        ]} 
+                      />
+                    </View>
                   </View>
                 );
               })}
             </View>
 
+            {/* Recent transactions */}
+            {getTransactionsByGroup(groupData.id).length > 0 && (
+              <View style={styles.statsCard}>
+                <ThemedText style={styles.statHeader}>Nedavne transakcije</ThemedText>
+                {getTransactionsByGroup(groupData.id).slice(0, 5).map(transaction => (
+                  <View key={transaction.id} style={styles.transactionRow}>
+                    <View style={styles.transactionInfo}>
+                      <ThemedText style={styles.transactionDescription}>{transaction.description}</ThemedText>
+                      <ThemedText style={styles.transactionDate}>
+                        {new Date(transaction.createdAt).toLocaleDateString()}
+                      </ThemedText>
+                    </View>
+                    <View style={styles.transactionAmount}>
+                      <ThemedText style={[
+                        styles.transactionAmountText,
+                        { color: transaction.type === 'payment' ? '#4CAF50' : '#FF9800' }
+                      ]}>
+                        {transaction.type === 'payment' ? '-' : '+'}{formatAmount(transaction.amount)}
+                      </ThemedText>
+                      <ThemedText style={styles.transactionStatus}>
+                        {transaction.status === 'completed' ? 'Zaključeno' : 'Čaka'}
+                      </ThemedText>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+
             {/* Monthly totals */}
-            <View style={styles.statsCard}>
-              <ThemedText style={styles.statHeader}>Mesečno</ThemedText>
-              {Object.entries(groupData.expenses.reduce<Record<string, number>>((acc, e) => {
-                const ym = (e.date || '').slice(0,7);
-                if (!ym) return acc;
-                acc[ym] = (acc[ym] || 0) + e.amount;
-                return acc;
-              }, {})).sort(([a],[b]) => a.localeCompare(b)).map(([ym, total]) => (
-                <View key={ym} style={styles.statRow}>
-                  <ThemedText style={styles.statRowName}>{ym}</ThemedText>
-                  <ThemedText style={styles.statRowValue}>{formatAmount(total)}</ThemedText>
-                </View>
-              ))}
-            </View>
+            {Object.keys(groupData.expenses.reduce<Record<string, number>>((acc, e) => {
+              const ym = (e.date || '').slice(0,7);
+              if (!ym) return acc;
+              acc[ym] = (acc[ym] || 0) + e.amount;
+              return acc;
+            }, {})).length > 0 && (
+              <View style={styles.statsCard}>
+                <ThemedText style={styles.statHeader}>Mesečni stroški</ThemedText>
+                {Object.entries(groupData.expenses.reduce<Record<string, number>>((acc, e) => {
+                  const ym = (e.date || '').slice(0,7);
+                  if (!ym) return acc;
+                  acc[ym] = (acc[ym] || 0) + e.amount;
+                  return acc;
+                }, {})).sort(([a],[b]) => a.localeCompare(b)).map(([ym, total]) => (
+                  <View key={ym} style={styles.statRow}>
+                    <ThemedText style={styles.statRowName}>{ym}</ThemedText>
+                    <ThemedText style={styles.statRowValue}>{formatAmount(total)}</ThemedText>
+                  </View>
+                ))}
+              </View>
+            )}
           </View>
         )}
 
@@ -595,6 +770,41 @@ export default function GroupDetailScreen() {
           </ThemedText>
           {groupData.expenses.map(renderExpense)}
         </View>
+        {/* Settle Up Modal */}
+        <Modal
+          visible={showSettleUpModal}
+          transparent={true}
+          animationType="fade"
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <ThemedText type="subtitle" style={styles.modalTitle}>
+                Poravnaj skupino
+              </ThemedText>
+              <ThemedText style={styles.modalMessage}>
+                Ali ste prepričani, da želite poravnati vse dolgove v tej skupini? To bo poslalo zahtevke za plačilo in označilo skupino kot zaprto.
+              </ThemedText>
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.modalCancelButton]}
+                  onPress={() => setShowSettleUpModal(false)}
+                >
+                  <ThemedText style={styles.modalCancelButtonText}>Prekliči</ThemedText>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.modalConfirmButton]}
+                  onPress={() => {
+                    setIsGroupClosed(true);
+                    settleUpGroup(groupData.id);
+                    setShowSettleUpModal(false);
+                  }}
+                >
+                  <ThemedText style={styles.modalConfirmButtonText}>Poravnaj</ThemedText>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </ScrollView>
     </ThemedView>
   );
@@ -983,5 +1193,208 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 4,
     fontStyle: 'italic',
+  },
+  settleUpSection: {
+    marginBottom: 24,
+    alignItems: 'center',
+  },
+  settleUpButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    marginBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  settleUpButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  settleUpDescription: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  closedGroupNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 200, 0, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 200, 0, 0.2)',
+  },
+  closedGroupText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#006600',
+    marginLeft: 8,
+  },
+  summaryCards: {
+    flexDirection: 'row',
+    marginBottom: 16,
+    gap: 8,
+  },
+  summaryCard: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    borderRadius: 12,
+    padding: 12,
+    alignItems: 'center',
+  },
+  summaryLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 4,
+  },
+  summaryValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  memberBalanceRow: {
+    marginBottom: 12,
+  },
+  memberBalanceInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  balanceBarContainer: {
+    height: 6,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  balanceBar: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  categoryRow: {
+    marginBottom: 12,
+  },
+  categoryInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  categoryBarContainer: {
+    height: 6,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  categoryBar: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  transactionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.05)',
+  },
+  transactionInfo: {
+    flex: 1,
+  },
+  transactionDescription: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 2,
+  },
+  transactionDate: {
+    fontSize: 12,
+    color: '#666',
+  },
+  transactionAmount: {
+    alignItems: 'flex-end',
+  },
+  transactionAmountText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  transactionStatus: {
+    fontSize: 10,
+    color: '#666',
+    marginTop: 2,
+  },
+  splitActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  smallButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    borderRadius: 6,
+  },
+  smallButtonText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#666',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 20,
+    margin: 20,
+    minWidth: 300,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  modalMessage: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 20,
+    textAlign: 'center',
+    color: '#666',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  modalCancelButton: {
+    backgroundColor: '#f0f0f0',
+  },
+  modalConfirmButton: {
+    backgroundColor: '#4CAF50',
+  },
+  modalCancelButtonText: {
+    color: '#666',
+    fontWeight: '500',
+  },
+  modalConfirmButtonText: {
+    color: 'white',
+    fontWeight: '500',
   },
 });

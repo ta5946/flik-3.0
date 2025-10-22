@@ -2,6 +2,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
+import { MOCK_MEMBERS, useGroups } from '@/contexts/GroupsContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
@@ -9,32 +10,46 @@ import { Alert, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from
 
 export default function RequestMoneyScreen() {
   const colorScheme = useColorScheme();
+  const { addTransaction } = useGroups();
   const [amount, setAmount] = useState('');
   const [message, setMessage] = useState('');
-  const [recipient, setRecipient] = useState('');
   const [selectedContact, setSelectedContact] = useState(null);
-
-  const mockContacts = [
-    { id: '1', name: 'ALJAŽ V.', phone: '+386 40 102 030' },
-    { id: '2', name: 'MARTA K.', phone: '+386 41 234 567' },
-    { id: '3', name: 'PETRA M.', phone: '+386 42 345 678' },
-    { id: '4', name: 'MARKO L.', phone: '+386 43 456 789' },
-  ];
+  const [showContactList, setShowContactList] = useState(false);
 
   const handleRequest = () => {
-    if (!amount || !recipient) {
+    if (!amount || !selectedContact) {
       Alert.alert('Napaka', 'Prosimo, vnesite znesek in izberite prejemnika.');
+      return;
+    }
+
+    const amountValue = parseFloat(amount.replace(',', '.'));
+    if (isNaN(amountValue) || amountValue <= 0) {
+      Alert.alert('Napaka', 'Prosimo, vnesite veljaven znesek.');
       return;
     }
 
     Alert.alert(
       'Pošlji zahtevek',
-      `Ali želite poslati zahtevek za ${amount} EUR ${recipient}?`,
+      `Ali želite poslati zahtevek za ${amount} EUR ${selectedContact.name}?`,
       [
         { text: 'Prekliči', style: 'cancel' },
         { 
           text: 'Pošlji', 
           onPress: () => {
+            // Create individual request transaction
+            const transactionData = {
+              groupId: 'individual', // Special group ID for individual transactions
+              fromUserId: selectedContact.id, // The person who should pay
+              toUserId: '1', // Janez is the one requesting
+              amount: amountValue,
+              type: 'request' as const,
+              status: 'pending' as const,
+              description: message || `Zahtevek za ${selectedContact.name}`,
+            };
+            
+            console.log('Creating request transaction:', transactionData);
+            addTransaction(transactionData);
+            
             Alert.alert('Uspeh', 'Zahtevek je bil poslan!');
             router.back();
           }
@@ -45,7 +60,7 @@ export default function RequestMoneyScreen() {
 
   const selectContact = (contact) => {
     setSelectedContact(contact);
-    setRecipient(contact.name);
+    setShowContactList(false);
   };
 
   return (
@@ -62,10 +77,76 @@ export default function RequestMoneyScreen() {
           <View style={styles.placeholder} />
         </View>
 
-        {/* Request Icon */}
-        <View style={styles.requestIcon}>
-          <IconSymbol name="plus" size={32} color={Colors[colorScheme ?? 'light'].primary} />
+        {/* Recipient Selection */}
+        <View style={styles.recipientSection}>
+          <TouchableOpacity 
+            style={styles.recipientSelector}
+            onPress={() => setShowContactList(!showContactList)}
+          >
+            <View style={styles.recipientIcon}>
+              <IconSymbol name="arrow.down.left" size={32} color={Colors[colorScheme ?? 'light'].primary} />
+            </View>
+            <View style={styles.recipientInfo}>
+              {selectedContact ? (
+                <>
+                  <ThemedText type="subtitle" style={styles.recipientName}>
+                    {selectedContact.name}
+                  </ThemedText>
+                  <ThemedText style={styles.recipientPhone}>
+                    {selectedContact.phone}
+                  </ThemedText>
+                </>
+              ) : (
+                <>
+                  <ThemedText type="subtitle" style={styles.recipientName}>
+                    Izberite prejemnika
+                  </ThemedText>
+                  <ThemedText style={styles.recipientPhone}>
+                    Tapnite za izbiro
+                  </ThemedText>
+                </>
+              )}
+            </View>
+            <IconSymbol 
+              name={showContactList ? "chevron.up" : "chevron.down"} 
+              size={20} 
+              color={Colors[colorScheme ?? 'light'].icon} 
+            />
+          </TouchableOpacity>
         </View>
+
+        {/* Contact List */}
+        {showContactList && (
+          <View style={styles.contactList}>
+            {MOCK_MEMBERS.filter(member => member.id !== '1').map((contact) => (
+              <TouchableOpacity
+                key={contact.id}
+                style={[
+                  styles.contactItem,
+                  selectedContact?.id === contact.id && { backgroundColor: Colors[colorScheme ?? 'light'].secondary },
+                ]}
+                onPress={() => selectContact(contact)}
+              >
+                <View style={styles.contactAvatar}>
+                  <ThemedText style={styles.contactInitial}>
+                    {contact.name.charAt(0)}
+                  </ThemedText>
+                </View>
+                <View style={styles.contactInfo}>
+                  <ThemedText type="defaultSemiBold" style={styles.contactName}>
+                    {contact.name}
+                  </ThemedText>
+                  <ThemedText style={styles.contactPhone}>
+                    {contact.phone}
+                  </ThemedText>
+                </View>
+                {selectedContact?.id === contact.id && (
+                  <IconSymbol name="checkmark.circle.fill" size={24} color={Colors[colorScheme ?? 'light'].success} />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
 
         {/* Amount Input */}
         <View style={styles.inputSection}>
@@ -114,49 +195,16 @@ export default function RequestMoneyScreen() {
           />
         </View>
 
-        {/* Contact Selection */}
-        <View style={styles.contactsSection}>
-          <ThemedText style={styles.sectionTitle}>Izberite kontakt:</ThemedText>
-          <View style={styles.contactsList}>
-            {mockContacts.map((contact) => (
-              <TouchableOpacity
-                key={contact.id}
-                style={[
-                  styles.contactItem,
-                  selectedContact?.id === contact.id && { backgroundColor: Colors[colorScheme ?? 'light'].secondary },
-                ]}
-                onPress={() => selectContact(contact)}
-              >
-                <View style={styles.contactAvatar}>
-                  <ThemedText style={styles.contactInitial}>
-                    {contact.name.charAt(0)}
-                  </ThemedText>
-                </View>
-                <View style={styles.contactInfo}>
-                  <ThemedText type="defaultSemiBold" style={styles.contactName}>
-                    {contact.name}
-                  </ThemedText>
-                  <ThemedText style={styles.contactPhone}>
-                    {contact.phone}
-                  </ThemedText>
-                </View>
-                {selectedContact?.id === contact.id && (
-                  <IconSymbol name="checkmark.circle.fill" size={24} color={Colors[colorScheme ?? 'light'].success} />
-                )}
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
 
         {/* Request Summary */}
-        {amount && recipient && (
+        {amount && selectedContact && (
           <View style={styles.requestSummary}>
             <ThemedText style={styles.summaryTitle}>Povzetek zahtevka:</ThemedText>
             <View style={styles.summaryCard}>
               <View style={styles.summaryRow}>
                 <ThemedText style={styles.summaryLabel}>Prejemnik:</ThemedText>
                 <ThemedText type="defaultSemiBold" style={styles.summaryValue}>
-                  {recipient}
+                  {selectedContact.name}
                 </ThemedText>
               </View>
               <View style={styles.summaryRow}>
@@ -181,10 +229,10 @@ export default function RequestMoneyScreen() {
         <TouchableOpacity
           style={[
             styles.sendButton,
-            { backgroundColor: amount && recipient ? Colors[colorScheme ?? 'light'].primary : Colors[colorScheme ?? 'light'].icon },
+            { backgroundColor: amount && selectedContact ? Colors[colorScheme ?? 'light'].primary : Colors[colorScheme ?? 'light'].icon },
           ]}
           onPress={handleRequest}
-          disabled={!amount || !recipient}
+          disabled={!amount || !selectedContact}
         >
           <ThemedText style={styles.sendButtonText}>POŠLJI ZAHTEVEK</ThemedText>
         </TouchableOpacity>
@@ -226,9 +274,71 @@ const styles = StyleSheet.create({
   placeholder: {
     width: 40,
   },
-  requestIcon: {
+  recipientSection: {
+    marginBottom: 24,
+  },
+  recipientSelector: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 30,
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    borderRadius: 16,
+  },
+  recipientIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(0, 102, 204, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  recipientInfo: {
+    flex: 1,
+  },
+  recipientName: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  recipientPhone: {
+    fontSize: 14,
+    opacity: 0.7,
+  },
+  contactList: {
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  contactItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    marginBottom: 8,
+  },
+  contactAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#0066CC',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  contactInitial: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  contactName: {
+    fontSize: 16,
+    marginBottom: 2,
+  },
+  contactPhone: {
+    fontSize: 14,
+    opacity: 0.7,
   },
   inputSection: {
     marginBottom: 24,
@@ -302,50 +412,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
-  },
-  contactsSection: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 12,
-  },
-  contactsList: {
-    marginBottom: 8,
-  },
-  contactItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderRadius: 12,
-    backgroundColor: 'rgba(0,0,0,0.05)',
-    marginBottom: 8,
-  },
-  contactAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#0066CC',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  contactInitial: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  contactInfo: {
-    flex: 1,
-  },
-  contactName: {
-    fontSize: 16,
-    marginBottom: 2,
-  },
-  contactPhone: {
-    fontSize: 14,
-    opacity: 0.7,
   },
   requestSummary: {
     marginBottom: 24,

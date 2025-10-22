@@ -2,13 +2,15 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
+import { MOCK_MEMBERS, useGroups } from '@/contexts/GroupsContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import React, { useState } from 'react';
+import { useLocalSearchParams } from 'expo-router';
+import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface Transaction {
   id: string;
-  type: 'sent' | 'received' | 'expense' | 'settlement';
+  type: 'sent' | 'received' | 'expense' | 'settlement' | 'incoming' | 'outgoing';
   amount: number;
   currency: string;
   description: string;
@@ -17,68 +19,234 @@ interface Transaction {
   status: 'completed' | 'pending' | 'failed';
   groupName?: string;
   category: string;
+  isSettleUp?: boolean;
+  isJanezOwing?: boolean;
+  isJanezOwed?: boolean;
+  isJanezPaid?: boolean;
+  isJanezReceived?: boolean;
+  createdAt?: string;
 }
-
-const mockTransactions: Transaction[] = [
-  {
-    id: '1',
-    type: 'sent',
-    amount: 25.50,
-    currency: 'EUR',
-    description: 'Za kosilo',
-    recipient: 'ALJAŽ V.',
-    date: '2024-01-15',
-    status: 'completed',
-    category: 'Hrana in pijača',
-  },
-  {
-    id: '2',
-    type: 'expense',
-    amount: 87.25,
-    currency: 'EUR',
-    description: 'Hotelski račun',
-    date: '2024-01-14',
-    status: 'completed',
-    groupName: 'Potovanje v Italijo',
-    category: 'Nastanitev',
-  },
-  {
-    id: '3',
-    type: 'received',
-    amount: 45.30,
-    currency: 'EUR',
-    description: 'Sporočilo',
-    recipient: 'MARTA K.',
-    date: '2024-01-13',
-    status: 'completed',
-    category: 'Prejemek',
-  },
-  {
-    id: '4',
-    type: 'settlement',
-    amount: 12.50,
-    currency: 'EUR',
-    description: 'Poravnava dolga',
-    recipient: 'PETRA M.',
-    date: '2024-01-12',
-    status: 'completed',
-    groupName: 'Večerja',
-    category: 'Hrana in pijača',
-  },
-];
 
 export default function TransactionsScreen() {
   const colorScheme = useColorScheme();
-  const [transactions] = useState<Transaction[]>(mockTransactions);
+  const { transactions: settleUpTransactions, groups } = useGroups();
+  const { filter } = useLocalSearchParams();
   const [directionFilter, setDirectionFilter] = useState<'all' | 'sent' | 'received'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'individual' | 'group'>('all');
+  const [showPendingOnly, setShowPendingOnly] = useState(false);
+  const [showCompletedOnly, setShowCompletedOnly] = useState(false);
+
+  // Set initial filters based on URL params
+  useEffect(() => {
+    if (filter === 'pending') {
+      setShowPendingOnly(true);
+      setShowCompletedOnly(false);
+    } else if (filter === 'completed') {
+      setShowPendingOnly(false);
+      setShowCompletedOnly(true);
+    } else {
+      setShowPendingOnly(false);
+      setShowCompletedOnly(false);
+    }
+  }, [filter]);
+
+  // Static test data
+  const staticPendingRequests = [
+    { 
+      id: 'p1', 
+      name: 'ALJAŽ V.', 
+      amount: 15.75, 
+      description: 'Za kino', 
+      type: 'incoming',
+      createdAt: new Date(Date.now() - 30 * 60 * 1000).toISOString()
+    },
+    { 
+      id: 'p2', 
+      name: 'MARTA K.', 
+      amount: 45.30, 
+      description: 'Za skupni obrok', 
+      type: 'outgoing',
+      createdAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString()
+    },
+    { 
+      id: 'p3', 
+      name: 'PETRA M.', 
+      amount: 25.00, 
+      description: 'Za benzin', 
+      type: 'incoming',
+      createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
+    },
+    { 
+      id: 'p4', 
+      name: 'MIHA M.', 
+      amount: 12.50, 
+      description: 'Za kavo', 
+      type: 'outgoing',
+      createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString()
+    },
+    { 
+      id: 'p5', 
+      name: 'ANA S.', 
+      amount: 35.80, 
+      description: 'Za kosilo', 
+      type: 'incoming',
+      createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString()
+    },
+    { 
+      id: 'p6', 
+      name: 'MARKO P.', 
+      amount: 18.90, 
+      description: 'Za parkiranje', 
+      type: 'outgoing',
+      createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString()
+    },
+  ];
+
+  const staticRecentTransactions = [
+    { 
+      id: '1', 
+      name: 'ALJAŽ V.', 
+      amount: 25.50, 
+      description: 'Za kosilo', 
+      type: 'sent',
+      createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
+    },
+    { 
+      id: '2', 
+      name: 'MARTA K.', 
+      amount: 45.30, 
+      description: 'Sporočilo', 
+      type: 'received',
+      createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString()
+    },
+    { 
+      id: '3', 
+      name: 'PETRA M.', 
+      amount: 87.25, 
+      description: 'Hotelski račun', 
+      type: 'expense', 
+      groupName: 'Potovanje v Italijo',
+      createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    },
+    { 
+      id: '4', 
+      name: 'MIHA M.', 
+      amount: 15.75, 
+      description: 'Za kino', 
+      type: 'sent',
+      createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
+    },
+    { 
+      id: '5', 
+      name: 'ANA S.', 
+      amount: 32.40, 
+      description: 'Za benzin', 
+      type: 'received',
+      createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
+    },
+    { 
+      id: '6', 
+      name: 'MARKO P.', 
+      amount: 18.90, 
+      description: 'Za parkiranje', 
+      type: 'expense',
+      groupName: 'Mestni izlet',
+      createdAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString()
+    },
+    { 
+      id: '7', 
+      name: 'LARA T.', 
+      amount: 55.60, 
+      description: 'Za večerjo', 
+      type: 'sent',
+      createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString()
+    },
+  ];
+
+  // Convert settle up transactions to pending requests format
+  const settleUpRequests = settleUpTransactions
+    .filter(t => t.status === 'pending' && t.type === 'request')
+    .map(t => {
+      const group = groups.find(g => g.id === t.groupId);
+      const fromMember = group?.members.find(m => m.id === t.fromUserId);
+      const toMember = group?.members.find(m => m.id === t.toUserId);
+      
+      // For individual transactions, use MOCK_MEMBERS
+      const fromMemberIndividual = t.groupId === 'individual' ? MOCK_MEMBERS.find(m => m.id === t.fromUserId) : fromMember;
+      const toMemberIndividual = t.groupId === 'individual' ? MOCK_MEMBERS.find(m => m.id === t.toUserId) : toMember;
+      
+      const isJanezOwing = t.fromUserId === '1';
+      const isJanezOwed = t.toUserId === '1';
+      
+      return {
+        id: t.id,
+        name: isJanezOwing ? (toMemberIndividual?.name || 'Neznan uporabnik') : (fromMemberIndividual?.name || 'Neznan uporabnik'),
+        amount: t.amount,
+        description: t.description,
+        type: isJanezOwing ? 'outgoing' as const : 'incoming' as const,
+        isSettleUp: t.groupId !== 'individual',
+        isJanezOwing,
+        isJanezOwed,
+        createdAt: t.createdAt,
+      };
+    });
+
+  // Convert completed settle up transactions to recent transactions format
+  const settleUpRecentTransactions = settleUpTransactions
+    .filter(t => t.status === 'completed' && t.type === 'payment')
+    .map(t => {
+      const group = groups.find(g => g.id === t.groupId);
+      const fromMember = group?.members.find(m => m.id === t.fromUserId);
+      const toMember = group?.members.find(m => m.id === t.toUserId);
+      
+      // For individual transactions, use MOCK_MEMBERS
+      const fromMemberIndividual = t.groupId === 'individual' ? MOCK_MEMBERS.find(m => m.id === t.fromUserId) : fromMember;
+      const toMemberIndividual = t.groupId === 'individual' ? MOCK_MEMBERS.find(m => m.id === t.toUserId) : toMember;
+      
+      const isJanezPaid = t.fromUserId === '1';
+      const isJanezReceived = t.toUserId === '1';
+      
+      return {
+        id: t.id,
+        name: isJanezPaid ? (toMemberIndividual?.name || 'Neznan uporabnik') : (fromMemberIndividual?.name || 'Neznan uporabnik'),
+        amount: t.amount,
+        description: t.description,
+        type: isJanezPaid ? 'sent' as const : 'received' as const,
+        groupName: t.groupId === 'individual' ? undefined : group?.name,
+        isSettleUp: t.groupId !== 'individual',
+        isJanezPaid,
+        isJanezReceived,
+        createdAt: t.createdAt,
+      };
+    });
+
+  // Combine all transactions
+  const allPendingRequests = [...staticPendingRequests, ...settleUpRequests];
+  const allRecentTransactions = [...staticRecentTransactions, ...settleUpRecentTransactions];
+  const allTransactions = [...allPendingRequests, ...allRecentTransactions];
+  
+  // Debug logging
+  console.log('Transactions page - All transactions:', settleUpTransactions);
+  console.log('Transactions page - Settle up requests:', settleUpRequests);
+  console.log('Transactions page - All pending requests:', allPendingRequests);
 
   const formatAmount = (amount: number, type: string) => {
-    const sign = type === 'sent' || type === 'expense' ? '-' : '+';
+    const sign = type === 'sent' || type === 'expense' || type === 'outgoing' ? '-' : '+';
     return `${sign}${amount.toFixed(2)} EUR`;
   };
 
-  const getTransactionIcon = (type: string, groupName?: string) => {
+  const getTransactionIcon = (type: string, groupName?: string, isSettleUp?: boolean, isJanezOwing?: boolean, isJanezPaid?: boolean) => {
+    // Use settle up icon if it's a settle up transaction
+    if (isSettleUp) {
+      if (isJanezOwing !== undefined) {
+        return isJanezOwing ? 'arrow.up.right' : 'arrow.down.left'; // For pending requests
+      }
+      if (isJanezPaid !== undefined) {
+        return isJanezPaid ? 'arrow.up.right' : 'arrow.down.left'; // For recent transactions
+      }
+      return 'checkmark.circle'; // Fallback
+    }
+    
     // Use group icon if transaction is part of a group
     if (groupName) {
       return 'person.3.fill';
@@ -93,6 +261,10 @@ export default function TransactionsScreen() {
         return 'creditcard';
       case 'settlement':
         return 'checkmark.circle';
+      case 'incoming':
+        return 'arrow.down.left';
+      case 'outgoing':
+        return 'arrow.up.right';
       default:
         return 'circle';
     }
@@ -102,36 +274,47 @@ export default function TransactionsScreen() {
     switch (type) {
       case 'sent':
       case 'expense':
-        return Colors[colorScheme ?? 'light'].error;
+      case 'outgoing':
+        return '#DC3545'; // Red for outgoing/sent
       case 'received':
       case 'settlement':
-        return Colors[colorScheme ?? 'light'].success;
+      case 'incoming':
+        return '#28A745'; // Green for incoming/received
       default:
         return Colors[colorScheme ?? 'light'].text;
     }
   };
 
-  const formatDate = (dateString: string) => {
+  const formatSlovenianDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('sl-SI', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
     });
   };
 
-  const filteredTransactions = transactions.filter(transaction => {
+  const filteredTransactions = allTransactions.filter(transaction => {
+    // Pending/Completed filter
+    const statusMatch = showPendingOnly ? 
+      (transaction.type === 'incoming' || transaction.type === 'outgoing') :
+      showCompletedOnly ?
+      (transaction.type === 'sent' || transaction.type === 'received' || transaction.type === 'expense') :
+      true; // Show all if no specific filter
+    
     // Direction filter
     const directionMatch = directionFilter === 'all' || 
-      (directionFilter === 'sent' && transaction.type === 'sent') ||
-      (directionFilter === 'received' && (transaction.type === 'received' || transaction.type === 'settlement'));
+      (directionFilter === 'sent' && (transaction.type === 'sent' || transaction.type === 'outgoing')) ||
+      (directionFilter === 'received' && (transaction.type === 'received' || transaction.type === 'incoming'));
     
     // Type filter
     const typeMatch = typeFilter === 'all' ||
       (typeFilter === 'individual' && !transaction.groupName) ||
       (typeFilter === 'group' && transaction.groupName);
     
-    return directionMatch && typeMatch;
+    return statusMatch && directionMatch && typeMatch;
   });
 
   const renderTransaction = (transaction: Transaction) => (
@@ -145,7 +328,7 @@ export default function TransactionsScreen() {
       <View style={styles.transactionHeader}>
         <View style={styles.transactionIcon}>
           <IconSymbol
-            name={getTransactionIcon(transaction.type, transaction.groupName)}
+            name={getTransactionIcon(transaction.type, transaction.groupName, (transaction as any).isSettleUp, (transaction as any).isJanezOwing, (transaction as any).isJanezPaid)}
             size={20}
             color={getTransactionColor(transaction.type)}
           />
@@ -164,9 +347,11 @@ export default function TransactionsScreen() {
               {transaction.groupName}
             </ThemedText>
           )}
-          <ThemedText style={styles.transactionCategory}>
-            {transaction.category}
-          </ThemedText>
+          {(transaction as any).createdAt && (
+            <ThemedText style={styles.transactionTime}>
+              {formatSlovenianDate((transaction as any).createdAt)}
+            </ThemedText>
+          )}
         </View>
         <View style={styles.transactionAmount}>
           <ThemedText
@@ -178,9 +363,21 @@ export default function TransactionsScreen() {
           >
             {formatAmount(transaction.amount, transaction.type)}
           </ThemedText>
-          <ThemedText style={styles.transactionDate}>
-            {formatDate(transaction.date)}
-          </ThemedText>
+          {/* Show action buttons for pending requests */}
+          {(transaction.type === 'incoming' || transaction.type === 'outgoing') && (
+            <View style={styles.requestActions}>
+              {transaction.type === 'outgoing' && (
+                <TouchableOpacity style={styles.requestPayButton}>
+                  <ThemedText style={styles.requestPayButtonText}>Plačaj</ThemedText>
+                </TouchableOpacity>
+              )}
+              {transaction.type === 'incoming' && (
+                <TouchableOpacity style={styles.remindButton}>
+                  <ThemedText style={styles.remindButtonText}>Opomni</ThemedText>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
         </View>
       </View>
     </TouchableOpacity>
@@ -191,7 +388,7 @@ export default function TransactionsScreen() {
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <ThemedText type="title" style={styles.title}>
-            Transakcije
+            {showPendingOnly ? 'Čakajoči zahtevki' : showCompletedOnly ? 'Zadnje transakcije' : 'Transakcije'}
           </ThemedText>
           <TouchableOpacity style={styles.filterButton}>
             <IconSymbol name="line.3.horizontal.decrease" size={24} color={Colors[colorScheme ?? 'light'].primary} />
@@ -429,5 +626,37 @@ const styles = StyleSheet.create({
   transactionDate: {
     fontSize: 11,
     opacity: 0.6,
+  },
+  transactionTime: {
+    fontSize: 11,
+    opacity: 0.5,
+    marginTop: 2,
+  },
+  requestActions: {
+    marginTop: 4,
+  },
+  requestPayButton: {
+    backgroundColor: '#DC3545',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 6,
+    marginTop: 4,
+  },
+  requestPayButtonText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  remindButton: {
+    backgroundColor: '#28A745',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 6,
+    marginTop: 4,
+  },
+  remindButtonText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
   },
 });
