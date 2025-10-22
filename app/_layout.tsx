@@ -17,7 +17,7 @@ export default function RootLayout() {
     <GroupsProvider>
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false, presentation: 'modal' }} />
           <Stack.Screen name="send-money" options={{ headerShown: false, presentation: 'modal' }} />
           <Stack.Screen name="request-money" options={{ headerShown: false, presentation: 'modal' }} />
           <Stack.Screen name="payment-confirmation" options={{ headerShown: false, presentation: 'modal' }} />

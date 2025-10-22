@@ -126,7 +126,7 @@ export default function AIInsightsScreen() {
         <View style={styles.overviewCard}>
           <View style={styles.totalSpent}>
             <ThemedText style={styles.totalSpentLabel}>Skupaj porabljeno</ThemedText>
-            <ThemedText type="title" style={styles.totalSpentAmount}>
+            <ThemedText type="title">
               {formatAmount(monthlySummary.totalSpent)}
             </ThemedText>
           </View>
