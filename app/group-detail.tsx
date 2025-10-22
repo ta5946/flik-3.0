@@ -270,7 +270,7 @@ export default function GroupDetailScreen() {
                 router.push(`/group-chat?groupId=${groupData.id}`);
               }}
             >
-              <IconSymbol name="text.bubble" size={20} color="white" />
+              <IconSymbol name="message" size={20} color="white" />
             </TouchableOpacity>
             <TouchableOpacity style={styles.menuButton}>
               <IconSymbol name="ellipsis" size={24} color={Colors[colorScheme ?? 'light'].text} />
@@ -852,7 +852,7 @@ const styles = StyleSheet.create({
   chatButton: {
     padding: 8,
     marginRight: 4,
-    backgroundColor: '#007AFF',
+    backgroundColor: '#1e40af',
     borderRadius: 8,
   },
   menuButton: {

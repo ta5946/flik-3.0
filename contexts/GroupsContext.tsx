@@ -36,10 +36,11 @@ export interface ChatMessage {
   groupId: string;
   senderId: string;
   senderName: string;
-  content: string;
+  message: string;
   timestamp: string;
   type: 'text' | 'expense' | 'system';
-  expenseId?: string; // For expense-related messages
+  expenseId?: string;
+  replyTo?: string;
 }
 
 export interface Group {
@@ -306,7 +307,7 @@ export const GroupsProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       groupId: newGroup.id,
       senderId: 'system',
       senderName: 'Sistem',
-      content: `Skupina "${newGroup.name}" je bila uspešno ustvarjena! 🎉`,
+      message: `Skupina "${newGroup.name}" je bila uspešno ustvarjena! 🎉`,
       timestamp: new Date().toISOString(),
       type: 'system',
     };
@@ -358,7 +359,7 @@ export const GroupsProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       groupId: groupId,
       senderId: 'system',
       senderName: 'Sistem',
-      content: `${expense.paidBy} je dodal/a strošek "${expense.description}" za ${expense.amount.toFixed(2)} EUR`,
+      message: `${expense.paidBy} je dodal/a strošek "${expense.description}" za ${expense.amount.toFixed(2)} EUR`,
       timestamp: new Date().toISOString(),
       type: 'expense',
       expenseId: expense.id,
@@ -440,6 +441,19 @@ export const GroupsProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       }
       return g;
     }));
+
+    // Add settlement notification message to the group chat
+    const settlementMessage: ChatMessage = {
+      id: Date.now().toString() + '_settlement',
+      groupId: groupId,
+      senderId: 'system',
+      senderName: 'Sistem',
+      message: `Skupina "${group.name}" je bila uspešno poravnana! ✅`,
+      timestamp: new Date().toISOString(),
+      type: 'system'
+    };
+    
+    setMessages(prev => [...prev, settlementMessage]);
   };
 
   const addTransaction = (transactionData: Omit<PaymentTransaction, 'id' | 'createdAt'>) => {
