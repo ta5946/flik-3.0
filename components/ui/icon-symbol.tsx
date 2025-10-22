@@ -18,6 +18,7 @@ const MAPPING = {
   'paperplane.fill': 'send',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
+  'chevron.left': 'chevron-left',
   'person.3.fill': 'group',
   'brain.head.profile': 'psychology',
   'creditcard.fill': 'credit-card',
