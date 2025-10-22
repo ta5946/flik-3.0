@@ -58,8 +58,8 @@ export default function GroupsScreen() {
                 style={[
                   styles.groupCard,
                   { backgroundColor: Colors[colorScheme ?? 'light'].background },
-                  { borderLeftColor: group.color },
                   group.closed && styles.closedGroupCard,
+                  
                 ]}
                 onPress={() => router.push(`/group-detail?id=${group.id}`)}
               >
@@ -236,7 +236,6 @@ const styles = StyleSheet.create({
     padding: 24,
     borderRadius: 20,
     marginBottom: 16,
-    borderLeftWidth: 6,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
