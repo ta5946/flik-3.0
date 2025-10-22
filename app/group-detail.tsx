@@ -2,79 +2,41 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
+import { GroupExpense, GroupMember, useGroups } from '@/contexts/GroupsContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
-interface GroupMember {
-  id: string;
-  name: string;
-  phone: string;
-  balance: number;
-  avatar?: string;
-}
-
-interface GroupExpense {
-  id: string;
-  description: string;
-  amount: number;
-  paidBy: string;
-  splitBetween: string[];
-  date: string;
-  category: string;
-}
-
 export default function GroupDetailScreen() {
   const colorScheme = useColorScheme();
+  const { getGroupById, addExpense } = useGroups();
+  const { id } = useLocalSearchParams<{ id: string }>();
   const [showAddExpense, setShowAddExpense] = useState(false);
   const [newExpense, setNewExpense] = useState({
     description: '',
     amount: '',
     category: 'food',
+    paidBy: '',
+    splitBetween: [] as string[],
   });
 
-  const groupData = {
-    id: '1',
-    name: 'Potovanje v Italijo',
-    members: [
-      { id: '1', name: 'Janez Novak', phone: '+386 40 123 456', balance: -87.25 },
-      { id: '2', name: 'ALJAŽ V.', phone: '+386 40 102 030', balance: 45.30 },
-      { id: '3', name: 'MARTA K.', phone: '+386 41 234 567', balance: 23.15 },
-      { id: '4', name: 'PETRA M.', phone: '+386 42 345 678', balance: 18.80 },
-    ],
-    totalExpenses: 1250.50,
-    budget: 1500.00,
-    expenses: [
-      {
-        id: '1',
-        description: 'Hotelski račun',
-        amount: 320.00,
-        paidBy: 'Janez Novak',
-        splitBetween: ['Janez Novak', 'ALJAŽ V.', 'MARTA K.', 'PETRA M.'],
-        date: '2024-01-14',
-        category: 'accommodation',
-      },
-      {
-        id: '2',
-        description: 'Večerja v restavraciji',
-        amount: 85.50,
-        paidBy: 'ALJAŽ V.',
-        splitBetween: ['Janez Novak', 'ALJAŽ V.', 'MARTA K.', 'PETRA M.'],
-        date: '2024-01-13',
-        category: 'food',
-      },
-      {
-        id: '3',
-        description: 'Benzin',
-        amount: 45.00,
-        paidBy: 'MARTA K.',
-        splitBetween: ['Janez Novak', 'ALJAŽ V.', 'MARTA K.', 'PETRA M.'],
-        date: '2024-01-12',
-        category: 'transport',
-      },
-    ],
-  };
+  const groupData = getGroupById(id || '1');
+
+  if (!groupData) {
+    return (
+      <ThemedView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <IconSymbol name="chevron.left" size={24} color={Colors[colorScheme ?? 'light'].text} />
+          </TouchableOpacity>
+          <ThemedText type="subtitle" style={styles.headerTitle}>
+            Skupina ni najdena
+          </ThemedText>
+        </View>
+      </ThemedView>
+    );
+  }
 
   const formatAmount = (amount: number) => {
     return `${amount.toFixed(2)} EUR`;
@@ -102,14 +64,39 @@ export default function GroupDetailScreen() {
   };
 
   const handleAddExpense = () => {
-    if (!newExpense.description || !newExpense.amount) {
-      Alert.alert('Napaka', 'Prosimo, vnesite opis in znesek.');
+    if (!newExpense.description || !newExpense.amount || !newExpense.paidBy) {
+      Alert.alert('Napaka', 'Prosimo, vnesite opis, znesek in izberite kdo je plačal.');
       return;
     }
 
+    const amount = parseFloat(newExpense.amount);
+    if (isNaN(amount) || amount <= 0) {
+      Alert.alert('Napaka', 'Prosimo, vnesite veljaven znesek.');
+      return;
+    }
+
+    // If no members are selected for splitting, split between all members
+    const splitBetween = newExpense.splitBetween.length > 0 
+      ? newExpense.splitBetween 
+      : groupData.members.map(member => member.name);
+
+    addExpense(groupData.id, {
+      description: newExpense.description,
+      amount: amount,
+      paidBy: newExpense.paidBy,
+      splitBetween: splitBetween,
+      category: newExpense.category,
+    });
+
     Alert.alert('Uspeh', 'Strošek je bil dodan!');
     setShowAddExpense(false);
-    setNewExpense({ description: '', amount: '', category: 'food' });
+    setNewExpense({ 
+      description: '', 
+      amount: '', 
+      category: 'food',
+      paidBy: '',
+      splitBetween: []
+    });
   };
 
   const renderMember = (member: GroupMember) => (
@@ -245,6 +232,7 @@ export default function GroupDetailScreen() {
         {showAddExpense && (
           <View style={styles.addExpenseForm}>
             <ThemedText type="subtitle" style={styles.formTitle}>Dodaj nov strošek</ThemedText>
+            
             <TextInput
               style={[styles.formInput, { color: Colors[colorScheme ?? 'light'].text }]}
               value={newExpense.description}
@@ -252,6 +240,7 @@ export default function GroupDetailScreen() {
               placeholder="Opis stroška..."
               placeholderTextColor={Colors[colorScheme ?? 'light'].icon}
             />
+            
             <TextInput
               style={[styles.formInput, { color: Colors[colorScheme ?? 'light'].text }]}
               value={newExpense.amount}
@@ -260,6 +249,63 @@ export default function GroupDetailScreen() {
               placeholderTextColor={Colors[colorScheme ?? 'light'].icon}
               keyboardType="numeric"
             />
+
+            {/* Paid By Selection */}
+            <View style={styles.memberSelection}>
+              <ThemedText style={styles.selectionLabel}>Plačal:</ThemedText>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.memberScroll}>
+                {groupData.members.map((member) => (
+                  <TouchableOpacity
+                    key={member.id}
+                    style={[
+                      styles.memberChip,
+                      newExpense.paidBy === member.name && styles.selectedChip
+                    ]}
+                    onPress={() => setNewExpense({ ...newExpense, paidBy: member.name })}
+                  >
+                    <ThemedText style={[
+                      styles.chipText,
+                      newExpense.paidBy === member.name && styles.selectedChipText
+                    ]}>
+                      {member.name}
+                    </ThemedText>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+
+            {/* Split Between Selection */}
+            <View style={styles.memberSelection}>
+              <ThemedText style={styles.selectionLabel}>Razdeli med:</ThemedText>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.memberScroll}>
+                {groupData.members.map((member) => {
+                  const isSelected = newExpense.splitBetween.includes(member.name);
+                  return (
+                    <TouchableOpacity
+                      key={member.id}
+                      style={[
+                        styles.memberChip,
+                        isSelected && styles.selectedChip
+                      ]}
+                      onPress={() => {
+                        const newSplitBetween = isSelected
+                          ? newExpense.splitBetween.filter(name => name !== member.name)
+                          : [...newExpense.splitBetween, member.name];
+                        setNewExpense({ ...newExpense, splitBetween: newSplitBetween });
+                      }}
+                    >
+                      <ThemedText style={[
+                        styles.chipText,
+                        isSelected && styles.selectedChipText
+                      ]}>
+                        {member.name}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+            
             <View style={styles.formButtons}>
               <TouchableOpacity 
                 style={[styles.formButton, styles.cancelButton]}
@@ -530,5 +576,36 @@ const styles = StyleSheet.create({
   expenseAmount: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  memberSelection: {
+    marginBottom: 16,
+  },
+  selectionLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 8,
+  },
+  memberScroll: {
+    flexDirection: 'row',
+  },
+  memberChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  selectedChip: {
+    backgroundColor: '#0066CC',
+    borderColor: '#0066CC',
+  },
+  chipText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  selectedChipText: {
+    color: 'white',
   },
 });

@@ -1,0 +1,526 @@
+import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { Colors } from '@/constants/theme';
+import { GroupMember, MOCK_MEMBERS, useGroups } from '@/contexts/GroupsContext';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import React, { useState } from 'react';
+import {
+    Alert,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native';
+
+interface AddGroupModalProps {
+  visible: boolean;
+  onClose: () => void;
+}
+
+const GROUP_COLORS = [
+  '#FF9AA2', // Stronger pink
+  '#A8E6CF', // Stronger mint
+  '#88D8F0', // Stronger blue
+  '#FFEAA7', // Stronger yellow
+  '#FFB347', // Stronger peach
+];
+
+export default function AddGroupModal({ visible, onClose }: AddGroupModalProps) {
+  const colorScheme = useColorScheme();
+  const { addGroup } = useGroups();
+  const [groupName, setGroupName] = useState('');
+  const [budget, setBudget] = useState('');
+  const [selectedMembers, setSelectedMembers] = useState<GroupMember[]>([MOCK_MEMBERS[0]]); // You are selected by default
+  const [selectedColor, setSelectedColor] = useState(GROUP_COLORS[0]);
+  const [memberSearchText, setMemberSearchText] = useState('');
+  const [showAllMembers, setShowAllMembers] = useState(false);
+  const [memberToRemove, setMemberToRemove] = useState<string | null>(null);
+
+  // Filter members based on search text (first name or last name)
+  const getFilteredMembers = () => {
+    if (!memberSearchText.trim()) {
+      return MOCK_MEMBERS.filter(member => !selectedMembers.some(m => m.id === member.id));
+    }
+    
+    const searchLower = memberSearchText.toLowerCase();
+    return MOCK_MEMBERS.filter(member => {
+      const isAlreadySelected = selectedMembers.some(m => m.id === member.id);
+      if (isAlreadySelected) return false;
+      
+      const nameParts = member.name.toLowerCase().split(' ');
+      return nameParts.some(part => part.startsWith(searchLower));
+    });
+  };
+
+  const handleMemberToggle = (member: GroupMember) => {
+    setSelectedMembers(prev => {
+      const isSelected = prev.some(m => m.id === member.id);
+      if (isSelected) {
+        return prev.filter(m => m.id !== member.id);
+      } else {
+        return [...prev, member];
+      }
+    });
+  };
+
+  const handleCreateGroup = () => {
+    if (!groupName.trim()) {
+      Alert.alert('Napaka', 'Prosimo, vnesite ime skupine.');
+      return;
+    }
+
+    if (selectedMembers.length < 2) {
+      Alert.alert('Napaka', 'Skupina mora imeti vsaj 2 člana.');
+      return;
+    }
+
+    const budgetAmount = budget ? parseFloat(budget) : 0;
+
+    addGroup({
+      name: groupName.trim(),
+      members: selectedMembers,
+      budget: budgetAmount,
+      currency: 'EUR',
+      color: selectedColor,
+    });
+
+    // Reset form
+    setGroupName('');
+    setBudget('');
+    setSelectedMembers([MOCK_MEMBERS[0]]); // Reset to just you
+    setSelectedColor(GROUP_COLORS[0]);
+    setMemberSearchText('');
+    setShowAllMembers(false);
+    setMemberToRemove(null);
+    
+    Alert.alert('Uspeh', 'Skupina je bila uspešno ustvarjena!');
+    onClose();
+  };
+
+  const handleClose = () => {
+    // Reset form when closing
+    setGroupName('');
+    setBudget('');
+    setSelectedMembers([MOCK_MEMBERS[0]]); // Reset to just you
+    setSelectedColor(GROUP_COLORS[0]);
+    setMemberSearchText('');
+    setShowAllMembers(false);
+    setMemberToRemove(null);
+    onClose();
+  };
+
+  return (
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={handleClose}
+    >
+      <ThemedView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={handleClose}>
+            <ThemedText style={styles.cancelButton}>Prekliči</ThemedText>
+          </TouchableOpacity>
+          <ThemedText type="subtitle" style={styles.title}>Nova skupina</ThemedText>
+          <TouchableOpacity onPress={handleCreateGroup}>
+            <ThemedText style={styles.createButton}>Ustvari</ThemedText>
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          {/* Group Name */}
+          <View style={styles.section}>
+            <ThemedText style={styles.sectionTitle}>Ime skupine</ThemedText>
+            <TextInput
+              style={[styles.input, { color: Colors[colorScheme ?? 'light'].text }]}
+              value={groupName}
+              onChangeText={setGroupName}
+              placeholder="Vnesite ime skupine..."
+              placeholderTextColor={Colors[colorScheme ?? 'light'].icon}
+            />
+          </View>
+
+          {/* Budget */}
+          <View style={styles.section}>
+            <ThemedText style={styles.sectionTitle}>Proračun (opcijsko)</ThemedText>
+            <TextInput
+              style={[styles.input, { color: Colors[colorScheme ?? 'light'].text }]}
+              value={budget}
+              onChangeText={setBudget}
+              placeholder="Vnesite proračun..."
+              placeholderTextColor={Colors[colorScheme ?? 'light'].icon}
+              keyboardType="numeric"
+            />
+          </View>
+
+          {/* Color Selection */}
+          <View style={styles.section}>
+            <ThemedText style={styles.sectionTitle}>Barva skupine</ThemedText>
+            <View style={styles.colorGrid}>
+              {GROUP_COLORS.map((color) => (
+                <TouchableOpacity
+                  key={color}
+                  style={[
+                    styles.colorOption,
+                    { backgroundColor: color },
+                    selectedColor === color && styles.selectedColor
+                  ]}
+                  onPress={() => setSelectedColor(color)}
+                >
+                  {selectedColor === color && (
+                    <IconSymbol name="checkmark" size={16} color="white" />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {/* Member Selection */}
+          <View style={styles.section}>
+            <ThemedText style={styles.sectionTitle}>
+              Člani skupine ({selectedMembers.length})
+            </ThemedText>
+            <ThemedText style={styles.sectionSubtitle}>
+              Izberite vsaj 2 člana za skupino
+            </ThemedText>
+            
+            {/* Selected Members Display */}
+            <View style={styles.selectedMembersContainer}>
+              {selectedMembers.map((member) => (
+                <TouchableOpacity
+                  key={member.id}
+                  style={[
+                    styles.selectedMemberChip,
+                    memberToRemove === member.id && styles.selectedMemberChipRemove
+                  ]}
+                  onPress={() => {
+                    if (memberToRemove === member.id) {
+                      // Remove the member
+                      handleMemberToggle(member);
+                      setMemberToRemove(null);
+                    } else {
+                      // Show remove state
+                      setMemberToRemove(member.id);
+                    }
+                  }}
+                  onLongPress={() => {
+                    // Long press to remove immediately
+                    handleMemberToggle(member);
+                    setMemberToRemove(null);
+                  }}
+                >
+                  <View style={[styles.memberAvatar, { backgroundColor: selectedColor }]}>
+                    <ThemedText style={styles.memberInitial}>
+                      {member.name.charAt(0)}
+                    </ThemedText>
+                  </View>
+                  <ThemedText style={styles.memberChipName}>{member.name}</ThemedText>
+                  {memberToRemove === member.id && (
+                    <View style={styles.removeIconContainer}>
+                      <IconSymbol name="xmark.circle.fill" size={18} color="#FF3B30" />
+                    </View>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Search Bar */}
+            <TouchableOpacity 
+              style={styles.searchContainer}
+              onPress={() => {
+                // Only show dropdown if there's search text
+                if (memberSearchText.length > 0) {
+                  setShowAllMembers(!showAllMembers);
+                }
+              }}
+            >
+              <IconSymbol name="magnifyingglass" size={18} color={Colors[colorScheme ?? 'light'].icon} />
+              <TextInput
+                style={[styles.searchInput, { color: Colors[colorScheme ?? 'light'].text }]}
+                value={memberSearchText}
+                onChangeText={(text) => {
+                  setMemberSearchText(text);
+                  if (text.length > 0) {
+                    setShowAllMembers(true);
+                  } else {
+                    setShowAllMembers(false);
+                  }
+                }}
+                placeholder="Išči in dodaj člane..."
+                placeholderTextColor={Colors[colorScheme ?? 'light'].icon}
+                onFocus={() => {
+                  // Only show dropdown if there's search text
+                  if (memberSearchText.length > 0) {
+                    setShowAllMembers(true);
+                  }
+                }}
+              />
+              {memberSearchText.length > 0 ? (
+                <TouchableOpacity onPress={() => {
+                  setMemberSearchText('');
+                  setShowAllMembers(false);
+                }}>
+                  <IconSymbol name="xmark.circle.fill" size={18} color={Colors[colorScheme ?? 'light'].icon} />
+                </TouchableOpacity>
+              ) : (
+                <IconSymbol 
+                  name="chevron.down" 
+                  size={16} 
+                  color={Colors[colorScheme ?? 'light'].icon} 
+                />
+              )}
+            </TouchableOpacity>
+
+            {/* Search Results - only show when typing */}
+            {memberSearchText.length > 0 && (
+              <View style={styles.searchResults}>
+                {getFilteredMembers().length > 0 ? (
+                  getFilteredMembers().map((member) => (
+                    <TouchableOpacity
+                      key={member.id}
+                      style={styles.memberResultOption}
+                      onPress={() => {
+                        handleMemberToggle(member);
+                        setMemberSearchText('');
+                        setShowAllMembers(false);
+                      }}
+                    >
+                      <View style={[styles.memberAvatar, { backgroundColor: selectedColor }]}>
+                        <ThemedText style={styles.memberInitial}>
+                          {member.name.charAt(0)}
+                        </ThemedText>
+                      </View>
+                      <View style={styles.memberDetails}>
+                        <ThemedText type="defaultSemiBold" style={styles.memberName}>
+                          {member.name}
+                        </ThemedText>
+                        <ThemedText style={styles.memberPhone}>
+                          {member.phone}
+                        </ThemedText>
+                      </View>
+                      <IconSymbol name="plus.circle.fill" size={20} color={Colors[colorScheme ?? 'light'].primary} />
+                    </TouchableOpacity>
+                  ))
+                ) : (
+                  <View style={styles.noResultsContainer}>
+                    <ThemedText style={styles.noResultsText}>
+                      Ni rezultatov za iskanje
+                    </ThemedText>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
+        </ScrollView>
+      </ThemedView>
+    </Modal>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 16,
+    backgroundColor: 'white',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.08)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  cancelButton: {
+    fontSize: 16,
+    color: '#666',
+  },
+  createButton: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#0066CC',
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+  },
+  section: {
+    marginBottom: 16,
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 6,
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    opacity: 0.7,
+    marginBottom: 12,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.1)',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 16,
+    backgroundColor: '#f8f9fa',
+  },
+  colorGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  colorOption: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  selectedColor: {
+    borderColor: '#000',
+  },
+  memberOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+  },
+  selectedMember: {
+    backgroundColor: 'rgba(0, 102, 204, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 102, 204, 0.3)',
+  },
+  memberInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  memberAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  memberInitial: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  memberDetails: {
+    flex: 1,
+  },
+  memberName: {
+    fontSize: 16,
+    marginBottom: 2,
+  },
+  memberPhone: {
+    fontSize: 14,
+    opacity: 0.7,
+  },
+  selectedMembersContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 8,
+  },
+  selectedMemberChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 102, 204, 0.1)',
+    borderRadius: 20,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    marginRight: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 102, 204, 0.3)',
+  },
+  selectedMemberChipRemove: {
+    backgroundColor: 'rgba(255, 59, 48, 0.1)',
+    borderColor: 'rgba(255, 59, 48, 0.3)',
+  },
+  memberChipName: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginLeft: 6,
+    marginRight: 4,
+  },
+  removeIconContainer: {
+    marginLeft: 4,
+  },
+  searchResults: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.1)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    maxHeight: 200,
+  },
+  memberResultOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.05)',
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.1)',
+    marginBottom: 6,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    marginLeft: 8,
+    marginRight: 8,
+  },
+  noResultsContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  noResultsText: {
+    fontSize: 14,
+    opacity: 0.6,
+    fontStyle: 'italic',
+  },
+});
