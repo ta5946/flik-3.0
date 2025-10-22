@@ -265,9 +265,12 @@ export default function GroupDetailScreen() {
           <View style={styles.headerActions}>
             <TouchableOpacity 
               style={styles.chatButton}
-              onPress={() => router.push(`/group-chat?groupId=${groupData.id}`)}
+              onPress={() => {
+                console.log('Chat button pressed, navigating to group chat for group:', groupData.id);
+                router.push(`/group-chat?groupId=${groupData.id}`);
+              }}
             >
-              <IconSymbol name="bubble.left" size={20} color={Colors[colorScheme ?? 'light'].text} />
+              <IconSymbol name="text.bubble" size={20} color="white" />
             </TouchableOpacity>
             <TouchableOpacity style={styles.menuButton}>
               <IconSymbol name="ellipsis" size={24} color={Colors[colorScheme ?? 'light'].text} />
@@ -849,7 +852,7 @@ const styles = StyleSheet.create({
   chatButton: {
     padding: 8,
     marginRight: 4,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: '#007AFF',
     borderRadius: 8,
   },
   menuButton: {

@@ -197,7 +197,7 @@ export default function ChatScreen() {
                     <View style={[
                       styles.messageBubble,
                       isCurrentUser ? styles.currentUserBubble : styles.otherUserBubble,
-                      { backgroundColor: isCurrentUser ? group.color : Colors[colorScheme ?? 'light'].background }
+                      { backgroundColor: isCurrentUser ? '#007AFF' : '#007AFF' }
                     ]}>
                       {!isCurrentUser && showAvatar && (
                         <ThemedText style={styles.senderName}>
@@ -362,6 +362,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 2,
     opacity: 0.8,
+    color: '#FFFFFF',
   },
   messageText: {
     fontSize: 16,
@@ -371,7 +372,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   otherUserText: {
-    color: '#000000',
+    color: '#FFFFFF',
   },
   messageTime: {
     fontSize: 11,
@@ -383,7 +384,7 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   otherUserTime: {
-    color: '#000000',
+    color: '#FFFFFF',
   },
   systemMessageContainer: {
     alignItems: 'center',
