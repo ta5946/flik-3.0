@@ -22,6 +22,7 @@ export default function RootLayout() {
           <Stack.Screen name="request-money" options={{ headerShown: false, presentation: 'modal' }} />
           <Stack.Screen name="payment-confirmation" options={{ headerShown: false, presentation: 'modal' }} />
           <Stack.Screen name="group-detail" options={{ headerShown: false, title: 'Skupina' }} />
+          <Stack.Screen name="group-chat" options={{ headerShown: false, title: 'Pogovor' }} />
           <Stack.Screen name="qr-scanner" options={{ headerShown: false, presentation: 'modal' }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
         </Stack>

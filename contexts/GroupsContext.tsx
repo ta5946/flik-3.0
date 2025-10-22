@@ -31,6 +31,17 @@ export interface PaymentTransaction {
   createdAt: string;
 }
 
+export interface ChatMessage {
+  id: string;
+  groupId: string;
+  senderId: string;
+  senderName: string;
+  content: string;
+  timestamp: string;
+  type: 'text' | 'expense' | 'system';
+  expenseId?: string; // For expense-related messages
+}
+
 export interface Group {
   id: string;
   name: string;
@@ -48,6 +59,7 @@ export interface Group {
 interface GroupsContextType {
   groups: Group[];
   transactions: PaymentTransaction[];
+  messages: ChatMessage[];
   addGroup: (group: Omit<Group, 'id' | 'totalExpenses' | 'expenses' | 'createdAt'>) => void;
   addExpense: (groupId: string, expense: Omit<GroupExpense, 'id' | 'date'>) => void;
   updateGroup: (groupId: string, updates: Partial<Group>) => void;
@@ -56,6 +68,8 @@ interface GroupsContextType {
   settleUpGroup: (groupId: string) => void;
   addTransaction: (transaction: Omit<PaymentTransaction, 'id' | 'createdAt'>) => void;
   getTransactionsByGroup: (groupId: string) => PaymentTransaction[];
+  addMessage: (message: Omit<ChatMessage, 'id' | 'timestamp'>) => void;
+  getMessagesByGroup: (groupId: string) => ChatMessage[];
 }
 
 const GroupsContext = createContext<GroupsContextType | undefined>(undefined);
@@ -74,15 +88,18 @@ export const MOCK_MEMBERS: GroupMember[] = [
 
 const STORAGE_KEY = '@flik_groups';
 const TRANSACTIONS_KEY = '@flik_transactions';
+const MESSAGES_KEY = '@flik_messages';
 
 export const GroupsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [groups, setGroups] = useState<Group[]>([]);
   const [transactions, setTransactions] = useState<PaymentTransaction[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
 
-  // Load groups and transactions from storage on mount
+  // Load groups, transactions, and messages from storage on mount
   useEffect(() => {
     loadGroups();
     loadTransactions();
+    loadMessages();
   }, []);
 
   // Save groups to storage whenever groups change
@@ -94,6 +111,11 @@ export const GroupsProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   useEffect(() => {
     saveTransactions();
   }, [transactions]);
+
+  // Save messages to storage whenever messages change
+  useEffect(() => {
+    saveMessages();
+  }, [messages]);
 
   const loadGroups = async () => {
     try {
@@ -152,6 +174,57 @@ export const GroupsProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           },
         ];
         setGroups(defaultGroups);
+
+        // Add some sample messages for the default group
+        const sampleMessages: ChatMessage[] = [
+          {
+            id: '1',
+            groupId: '1',
+            senderId: 'system',
+            senderName: 'Sistem',
+            content: 'Skupina "Potovanje v Italijo" je bila uspešno ustvarjena! 🎉',
+            timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
+            type: 'system',
+          },
+          {
+            id: '2',
+            groupId: '1',
+            senderId: '1',
+            senderName: 'Janez Novak',
+            content: 'Pozdravljeni! Kdaj se odpravljamo?',
+            timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000 + 5 * 60 * 1000).toISOString(),
+            type: 'text',
+          },
+          {
+            id: '3',
+            groupId: '1',
+            senderId: '2',
+            senderName: 'ALJAŽ V.',
+            content: 'Mislim, da se dogovorimo za naslednji teden!',
+            timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000 + 10 * 60 * 1000).toISOString(),
+            type: 'text',
+          },
+          {
+            id: '4',
+            groupId: '1',
+            senderId: 'system',
+            senderName: 'Sistem',
+            content: 'Janez Novak je dodal/a strošek "Hotelski račun" za 320.00 EUR',
+            timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
+            type: 'expense',
+            expenseId: '1',
+          },
+          {
+            id: '5',
+            groupId: '1',
+            senderId: '3',
+            senderName: 'MARTA K.',
+            content: 'Super! Hotel je rezerviran. Kje se bomo srečali?',
+            timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000 + 30 * 60 * 1000).toISOString(),
+            type: 'text',
+          },
+        ];
+        setMessages(sampleMessages);
       }
     } catch (error) {
       console.error('Error loading groups:', error);
@@ -191,6 +264,31 @@ export const GroupsProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
   };
 
+  const loadMessages = async () => {
+    try {
+      const storedMessages = await AsyncStorage.getItem(MESSAGES_KEY);
+      if (storedMessages) {
+        const parsedMessages = JSON.parse(storedMessages);
+        console.log('Loaded messages from storage:', parsedMessages);
+        setMessages(parsedMessages);
+      } else {
+        console.log('No stored messages found');
+      }
+    } catch (error) {
+      console.error('Error loading messages:', error);
+    }
+  };
+
+  const saveMessages = async () => {
+    try {
+      console.log('Saving messages to storage:', messages);
+      await AsyncStorage.setItem(MESSAGES_KEY, JSON.stringify(messages));
+      console.log('Messages saved successfully');
+    } catch (error) {
+      console.error('Error saving messages:', error);
+    }
+  };
+
   const addGroup = (groupData: Omit<Group, 'id' | 'totalExpenses' | 'expenses' | 'createdAt'>) => {
     const newGroup: Group = {
       ...groupData,
@@ -201,6 +299,19 @@ export const GroupsProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       closed: false,
     };
     setGroups(prev => [...prev, newGroup]);
+
+    // Add welcome message to the group chat
+    const welcomeMessage: ChatMessage = {
+      id: Date.now().toString() + '_welcome',
+      groupId: newGroup.id,
+      senderId: 'system',
+      senderName: 'Sistem',
+      content: `Skupina "${newGroup.name}" je bila uspešno ustvarjena! 🎉`,
+      timestamp: new Date().toISOString(),
+      type: 'system',
+    };
+    
+    setMessages(prev => [...prev, welcomeMessage]);
   };
 
   const addExpense = (groupId: string, expenseData: Omit<GroupExpense, 'id' | 'date'>) => {
@@ -240,6 +351,20 @@ export const GroupsProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       }
       return group;
     }));
+
+    // Add expense notification message to the group chat
+    const expenseMessage: ChatMessage = {
+      id: Date.now().toString() + '_expense',
+      groupId: groupId,
+      senderId: 'system',
+      senderName: 'Sistem',
+      content: `${expense.paidBy} je dodal/a strošek "${expense.description}" za ${expense.amount.toFixed(2)} EUR`,
+      timestamp: new Date().toISOString(),
+      type: 'expense',
+      expenseId: expense.id,
+    };
+    
+    setMessages(prev => [...prev, expenseMessage]);
   };
 
   const updateGroup = (groupId: string, updates: Partial<Group>) => {
@@ -335,9 +460,28 @@ export const GroupsProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     return transactions.filter(transaction => transaction.groupId === groupId);
   };
 
+  const addMessage = (messageData: Omit<ChatMessage, 'id' | 'timestamp'>) => {
+    const newMessage: ChatMessage = {
+      ...messageData,
+      id: Date.now().toString(),
+      timestamp: new Date().toISOString(),
+    };
+    console.log('Adding message to context:', newMessage);
+    setMessages(prev => {
+      const updated = [...prev, newMessage];
+      console.log('Updated messages array:', updated);
+      return updated;
+    });
+  };
+
+  const getMessagesByGroup = (groupId: string) => {
+    return messages.filter(message => message.groupId === groupId);
+  };
+
   const value: GroupsContextType = {
     groups,
     transactions,
+    messages,
     addGroup,
     addExpense,
     updateGroup,
@@ -346,6 +490,8 @@ export const GroupsProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     settleUpGroup,
     addTransaction,
     getTransactionsByGroup,
+    addMessage,
+    getMessagesByGroup,
   };
 
   return (
