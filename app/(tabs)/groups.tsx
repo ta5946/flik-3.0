@@ -66,7 +66,8 @@ export default function GroupsScreen() {
                 <View style={styles.groupHeader}>
                   <View style={styles.groupInfo}>
                     <View style={styles.groupNameRow}>
-                      <ThemedText type="subtitle" style={styles.groupName}>
+                      <View style={[styles.groupDot, { backgroundColor: group.color }]} />
+                      <ThemedText type="subtitle" style={[styles.groupName, styles.groupNameInRow]}>
                         {group.name}
                       </ThemedText>
                       {group.closed && (
@@ -257,10 +258,20 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     color: '#1e293b',
   },
+  groupNameInRow: {
+    marginBottom: 0,
+  },
   groupNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 2,
+  },
+  groupDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
+    alignSelf: 'center',
   },
   closedBadge: {
     backgroundColor: '#10B981',
