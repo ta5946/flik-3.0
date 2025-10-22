@@ -29,14 +29,14 @@ export default function GroupsScreen() {
   return (
     <ThemedView style={styles.container}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
+        <View style={[styles.header, { paddingTop: insets.top }]}>
           <View style={styles.headerContent}>
             <View style={styles.logoWrapper}>
               <View style={styles.logoIcon}>
-                <IconSymbol name="creditcard.fill" size={24} color="white" />
+                <IconSymbol name="person.3.fill" size={24} color="white" />
               </View>
               <ThemedText type="title" style={styles.headerTitle}>
-                Flik Pay
+                Skupine
               </ThemedText>
             </View>
             <ThemedText style={styles.headerSubtitle}>
@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '800',
     color: 'white',
     letterSpacing: -0.5,

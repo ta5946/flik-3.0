@@ -480,6 +480,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingTop: 16,
     marginBottom: 16,
   },
   logoContainer: {
@@ -499,7 +500,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   logoText: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '800',
     color: 'white',
     letterSpacing: -0.5,
