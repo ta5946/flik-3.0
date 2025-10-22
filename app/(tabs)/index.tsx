@@ -307,7 +307,7 @@ export default function HomeScreen() {
           
           <View style={styles.balanceCard}>
             <ThemedText style={styles.balanceLabel}>Stanje</ThemedText>
-            <ThemedText type="title" style={styles.balanceAmount}>
+            <ThemedText type="title">
               {formatAmount(balance)}
             </ThemedText>
           </View>
