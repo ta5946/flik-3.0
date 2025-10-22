@@ -6,13 +6,13 @@ import { GroupMember, MOCK_MEMBERS, useGroups } from '@/contexts/GroupsContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import React, { useState } from 'react';
 import {
-    Alert,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 interface AddGroupModalProps {
@@ -78,6 +78,10 @@ export default function AddGroupModal({ visible, onClose }: AddGroupModalProps) 
     }
 
     const budgetAmount = budget ? parseFloat(budget) : 0;
+    if (budget && (isNaN(budgetAmount) || budgetAmount < 0)) {
+      Alert.alert('Napaka', 'Proračun mora biti veljavno nenegativno število.');
+      return;
+    }
 
     addGroup({
       name: groupName.trim(),
@@ -85,6 +89,7 @@ export default function AddGroupModal({ visible, onClose }: AddGroupModalProps) 
       budget: budgetAmount,
       currency: 'EUR',
       color: selectedColor,
+      ownerId: selectedMembers[0]?.id ?? '1',
     });
 
     // Reset form
@@ -231,10 +236,7 @@ export default function AddGroupModal({ visible, onClose }: AddGroupModalProps) 
             <TouchableOpacity 
               style={styles.searchContainer}
               onPress={() => {
-                // Only show dropdown if there's search text
-                if (memberSearchText.length > 0) {
-                  setShowAllMembers(!showAllMembers);
-                }
+                setShowAllMembers(!showAllMembers);
               }}
             >
               <IconSymbol name="magnifyingglass" size={18} color={Colors[colorScheme ?? 'light'].icon} />
@@ -243,25 +245,18 @@ export default function AddGroupModal({ visible, onClose }: AddGroupModalProps) 
                 value={memberSearchText}
                 onChangeText={(text) => {
                   setMemberSearchText(text);
-                  if (text.length > 0) {
-                    setShowAllMembers(true);
-                  } else {
-                    setShowAllMembers(false);
-                  }
+                  setShowAllMembers(true);
                 }}
                 placeholder="Išči in dodaj člane..."
                 placeholderTextColor={Colors[colorScheme ?? 'light'].icon}
                 onFocus={() => {
-                  // Only show dropdown if there's search text
-                  if (memberSearchText.length > 0) {
-                    setShowAllMembers(true);
-                  }
+                  setShowAllMembers(true);
                 }}
               />
               {memberSearchText.length > 0 ? (
                 <TouchableOpacity onPress={() => {
                   setMemberSearchText('');
-                  setShowAllMembers(false);
+                  setShowAllMembers(true);
                 }}>
                   <IconSymbol name="xmark.circle.fill" size={18} color={Colors[colorScheme ?? 'light'].icon} />
                 </TouchableOpacity>
@@ -274,8 +269,8 @@ export default function AddGroupModal({ visible, onClose }: AddGroupModalProps) 
               )}
             </TouchableOpacity>
 
-            {/* Search Results - only show when typing */}
-            {memberSearchText.length > 0 && (
+            {/* Search Results */}
+            {showAllMembers && (
               <View style={styles.searchResults}>
                 {getFilteredMembers().length > 0 ? (
                   getFilteredMembers().map((member) => (

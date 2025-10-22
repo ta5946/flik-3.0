@@ -29,6 +29,7 @@ export interface Group {
   currency: string;
   color: string;
   createdAt: string;
+  ownerId: string;
 }
 
 interface GroupsContextType {
@@ -121,6 +122,7 @@ export const GroupsProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             currency: 'EUR',
             color: '#FF9AA2',
             createdAt: new Date().toISOString(),
+            ownerId: '1',
           },
         ];
         setGroups(defaultGroups);

@@ -5,7 +5,7 @@ import { Colors } from '@/constants/theme';
 import { GroupExpense, GroupMember, useGroups } from '@/contexts/GroupsContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function GroupDetailScreen() {
@@ -13,6 +13,7 @@ export default function GroupDetailScreen() {
   const { getGroupById, addExpense } = useGroups();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [showAddExpense, setShowAddExpense] = useState(false);
+  const [showStats, setShowStats] = useState(false);
   const [newExpense, setNewExpense] = useState({
     description: '',
     amount: '',
@@ -20,6 +21,9 @@ export default function GroupDetailScreen() {
     paidBy: '',
     splitBetween: [] as string[],
   });
+  const [splitMode, setSplitMode] = useState<'equal' | 'shares' | 'percentage'>('equal');
+  const [memberShares, setMemberShares] = useState<Record<string, number>>({});
+  const [memberPercentages, setMemberPercentages] = useState<Record<string, number>>({});
 
   const groupData = getGroupById(id || '1');
 
@@ -37,6 +41,28 @@ export default function GroupDetailScreen() {
       </ThemedView>
     );
   }
+
+  // Derived: owner name and defaults
+  const ownerName = useMemo(() => {
+    const owner = groupData.members.find(m => m.id === groupData.ownerId);
+    return owner?.name ?? groupData.members[0]?.name ?? '';
+  }, [groupData]);
+
+  // Ensure sensible defaults when opening the form
+  const openAddExpense = () => {
+    const allMembers = groupData.members.map(m => m.name);
+    setNewExpense({
+      description: '',
+      amount: '',
+      category: 'food',
+      paidBy: ownerName,
+      splitBetween: allMembers,
+    });
+    setSplitMode('equal');
+    setMemberShares({});
+    setMemberPercentages({});
+    setShowAddExpense(true);
+  };
 
   const formatAmount = (amount: number) => {
     return `${amount.toFixed(2)} EUR`;
@@ -75,6 +101,40 @@ export default function GroupDetailScreen() {
       return;
     }
 
+    // Budget validation with confirmation
+    const projectedTotal = groupData.totalExpenses + amount;
+    if (groupData.budget > 0 && projectedTotal > groupData.budget) {
+      Alert.alert(
+        'Presežen proračun',
+        'Ta strošek bo presegel proračun skupine. Želite vseeno nadaljevati?',
+        [
+          { text: 'Prekliči', style: 'cancel' },
+          { text: 'Nadaljuj', style: 'default', onPress: () => finalizeAddExpense(amount) },
+        ]
+      );
+      return;
+    }
+
+    // Continue to finalize if within budget
+    finalizeAddExpense(amount);
+  };
+
+  const finalizeAddExpense = (amount: number) => {
+    // Validate split mode specific requirements
+    if (splitMode === 'shares') {
+      const totalShares = newExpense.splitBetween.reduce((sum, name) => sum + (memberShares[name] || 0), 0);
+      if (totalShares <= 0) {
+        Alert.alert('Napaka', 'Prosimo, vnesite deleže za vse izbrane člane.');
+        return;
+      }
+    } else if (splitMode === 'percentage') {
+      const totalPercentage = newExpense.splitBetween.reduce((sum, name) => sum + (memberPercentages[name] || 0), 0);
+      if (Math.abs(totalPercentage - 100) > 0.01) {
+        Alert.alert('Napaka', 'Deleži morajo znašati 100%.');
+        return;
+      }
+    }
+
     // If no members are selected for splitting, split between all members
     const splitBetween = newExpense.splitBetween.length > 0 
       ? newExpense.splitBetween 
@@ -97,6 +157,8 @@ export default function GroupDetailScreen() {
       paidBy: '',
       splitBetween: []
     });
+    setMemberShares({});
+    setMemberPercentages({});
   };
 
   const renderMember = (member: GroupMember) => (
@@ -215,12 +277,15 @@ export default function GroupDetailScreen() {
         <View style={styles.quickActions}>
           <TouchableOpacity 
             style={[styles.actionButton, { backgroundColor: Colors[colorScheme ?? 'light'].primary }]}
-            onPress={() => setShowAddExpense(true)}
+            onPress={openAddExpense}
           >
             <IconSymbol name="plus" size={20} color="white" />
             <ThemedText style={styles.actionButtonText}>Dodaj strošek</ThemedText>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.actionButton, { backgroundColor: Colors[colorScheme ?? 'light'].secondary }]}>
+          <TouchableOpacity 
+            style={[styles.actionButton, { backgroundColor: Colors[colorScheme ?? 'light'].secondary }]}
+            onPress={() => setShowStats(prev => !prev)}
+          >
             <IconSymbol name="chart.bar" size={20} color={Colors[colorScheme ?? 'light'].primary} />
             <ThemedText style={[styles.actionButtonText, { color: Colors[colorScheme ?? 'light'].primary }]}>
               Statistike
@@ -228,31 +293,91 @@ export default function GroupDetailScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Statistics Section */}
+        {showStats && (
+          <View style={styles.statsSection}>
+            <ThemedText type="subtitle" style={styles.sectionTitle}>Statistike</ThemedText>
+
+            {/* Per-member balances */}
+            <View style={styles.statsCard}>
+              <ThemedText style={styles.statHeader}>Stanja po članih</ThemedText>
+              {groupData.members.map(m => (
+                <View key={m.id} style={styles.statRow}>
+                  <ThemedText style={styles.statRowName}>{m.name}</ThemedText>
+                  <ThemedText style={[styles.statRowValue, { color: getBalanceColor(m.balance) }]}>
+                    {m.balance > 0 ? '+' : ''}{formatAmount(m.balance)}
+                  </ThemedText>
+                </View>
+              ))}
+            </View>
+
+            {/* Category breakdown */}
+            <View style={styles.statsCard}>
+              <ThemedText style={styles.statHeader}>Po kategorijah</ThemedText>
+              {['food','accommodation','transport','entertainment','other'].map(cat => {
+                const total = groupData.expenses
+                  .filter(e => (['food','accommodation','transport','entertainment'].includes(e.category) ? e.category : 'other') === cat)
+                  .reduce((sum, e) => sum + e.amount, 0);
+                return (
+                  <View key={cat} style={styles.statRow}>
+                    <ThemedText style={styles.statRowName}>{cat}</ThemedText>
+                    <ThemedText style={styles.statRowValue}>{formatAmount(total)}</ThemedText>
+                  </View>
+                );
+              })}
+            </View>
+
+            {/* Monthly totals */}
+            <View style={styles.statsCard}>
+              <ThemedText style={styles.statHeader}>Mesečno</ThemedText>
+              {Object.entries(groupData.expenses.reduce<Record<string, number>>((acc, e) => {
+                const ym = (e.date || '').slice(0,7);
+                if (!ym) return acc;
+                acc[ym] = (acc[ym] || 0) + e.amount;
+                return acc;
+              }, {})).sort(([a],[b]) => a.localeCompare(b)).map(([ym, total]) => (
+                <View key={ym} style={styles.statRow}>
+                  <ThemedText style={styles.statRowName}>{ym}</ThemedText>
+                  <ThemedText style={styles.statRowValue}>{formatAmount(total)}</ThemedText>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
         {/* Add Expense Form */}
         {showAddExpense && (
           <View style={styles.addExpenseForm}>
             <ThemedText type="subtitle" style={styles.formTitle}>Dodaj nov strošek</ThemedText>
             
-            <TextInput
-              style={[styles.formInput, { color: Colors[colorScheme ?? 'light'].text }]}
-              value={newExpense.description}
-              onChangeText={(text) => setNewExpense({ ...newExpense, description: text })}
-              placeholder="Opis stroška..."
-              placeholderTextColor={Colors[colorScheme ?? 'light'].icon}
-            />
+            {/* Description */}
+            <View style={styles.inputGroup}>
+              <ThemedText style={styles.inputLabel}>Opis</ThemedText>
+              <TextInput
+                style={[styles.formInput, { color: Colors[colorScheme ?? 'light'].text }]}
+                value={newExpense.description}
+                onChangeText={(text) => setNewExpense({ ...newExpense, description: text })}
+                placeholder="Kaj ste plačali?"
+                placeholderTextColor={Colors[colorScheme ?? 'light'].icon}
+              />
+            </View>
             
-            <TextInput
-              style={[styles.formInput, { color: Colors[colorScheme ?? 'light'].text }]}
-              value={newExpense.amount}
-              onChangeText={(text) => setNewExpense({ ...newExpense, amount: text })}
-              placeholder="Znesek..."
-              placeholderTextColor={Colors[colorScheme ?? 'light'].icon}
-              keyboardType="numeric"
-            />
+            {/* Amount */}
+            <View style={styles.inputGroup}>
+              <ThemedText style={styles.inputLabel}>Znesek</ThemedText>
+              <TextInput
+                style={[styles.formInput, { color: Colors[colorScheme ?? 'light'].text }]}
+                value={newExpense.amount}
+                onChangeText={(text) => setNewExpense({ ...newExpense, amount: text })}
+                placeholder="0.00"
+                placeholderTextColor={Colors[colorScheme ?? 'light'].icon}
+                keyboardType="numeric"
+              />
+            </View>
 
             {/* Paid By Selection */}
-            <View style={styles.memberSelection}>
-              <ThemedText style={styles.selectionLabel}>Plačal:</ThemedText>
+            <View style={styles.inputGroup}>
+              <ThemedText style={styles.inputLabel}>Kdo je plačal?</ThemedText>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.memberScroll}>
                 {groupData.members.map((member) => (
                   <TouchableOpacity
@@ -274,9 +399,57 @@ export default function GroupDetailScreen() {
               </ScrollView>
             </View>
 
+            {/* Split Mode Selection */}
+            <View style={styles.inputGroup}>
+              <ThemedText style={styles.inputLabel}>Kako razdeli strošek?</ThemedText>
+              <View style={styles.splitModeContainer}>
+                <TouchableOpacity
+                  style={[styles.splitModeButton, splitMode === 'equal' && styles.splitModeButtonActive]}
+                  onPress={() => setSplitMode('equal')}
+                >
+                  <ThemedText style={[styles.splitModeText, splitMode === 'equal' && styles.splitModeTextActive]}>
+                    Enakomerno
+                  </ThemedText>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.splitModeButton, splitMode === 'shares' && styles.splitModeButtonActive]}
+                  onPress={() => setSplitMode('shares')}
+                >
+                  <ThemedText style={[styles.splitModeText, splitMode === 'shares' && styles.splitModeTextActive]}>
+                    Deleži
+                  </ThemedText>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.splitModeButton, splitMode === 'percentage' && styles.splitModeButtonActive]}
+                  onPress={() => setSplitMode('percentage')}
+                >
+                  <ThemedText style={[styles.splitModeText, splitMode === 'percentage' && styles.splitModeTextActive]}>
+                    Odstotki
+                  </ThemedText>
+                </TouchableOpacity>
+              </View>
+            </View>
+
             {/* Split Between Selection */}
-            <View style={styles.memberSelection}>
-              <ThemedText style={styles.selectionLabel}>Razdeli med:</ThemedText>
+            <View style={styles.inputGroup}>
+              <View style={styles.splitHeader}>
+                <ThemedText style={styles.inputLabel}>Razdeli med</ThemedText>
+                <View style={styles.splitActions}>
+                  <TouchableOpacity
+                    style={styles.smallButton}
+                    onPress={() => setNewExpense({ ...newExpense, splitBetween: groupData.members.map(m => m.name) })}
+                  >
+                    <ThemedText style={styles.smallButtonText}>Vsi</ThemedText>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.smallButton}
+                    onPress={() => setNewExpense({ ...newExpense, splitBetween: [] })}
+                  >
+                    <ThemedText style={styles.smallButtonText}>Nihče</ThemedText>
+                  </TouchableOpacity>
+                </View>
+              </View>
+              
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.memberScroll}>
                 {groupData.members.map((member) => {
                   const isSelected = newExpense.splitBetween.includes(member.name);
@@ -305,6 +478,90 @@ export default function GroupDetailScreen() {
                 })}
               </ScrollView>
             </View>
+
+            {/* Split Details */}
+            {newExpense.splitBetween.length > 0 && newExpense.amount && (
+              <View style={styles.splitDetails}>
+                <ThemedText style={styles.splitDetailsTitle}>Razdelitev</ThemedText>
+                {newExpense.splitBetween.map((memberName) => {
+                  const amount = parseFloat(newExpense.amount);
+                  let memberAmount = 0;
+                  let displayText = '';
+
+                  if (splitMode === 'equal') {
+                    memberAmount = amount / newExpense.splitBetween.length;
+                    displayText = formatAmount(memberAmount);
+                  } else if (splitMode === 'shares') {
+                    const totalShares = newExpense.splitBetween.reduce((sum, name) => sum + (memberShares[name] || 0), 0);
+                    if (totalShares > 0) {
+                      memberAmount = (amount * (memberShares[memberName] || 0)) / totalShares;
+                      displayText = `${formatAmount(memberAmount)} (${memberShares[memberName] || 0} deležev)`;
+                    } else {
+                      displayText = 'Vnesite deleže';
+                    }
+                  } else if (splitMode === 'percentage') {
+                    memberAmount = (amount * (memberPercentages[memberName] || 0)) / 100;
+                    displayText = `${formatAmount(memberAmount)} (${memberPercentages[memberName] || 0}%)`;
+                  }
+
+                  return (
+                    <View key={memberName} style={styles.splitDetailRow}>
+                      <ThemedText style={styles.splitDetailName}>{memberName}</ThemedText>
+                      <ThemedText style={styles.splitDetailAmount}>{displayText}</ThemedText>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+
+            {/* Share/Percentage Inputs */}
+            {splitMode === 'shares' && newExpense.splitBetween.length > 0 && (
+              <View style={styles.inputGroup}>
+                <ThemedText style={styles.inputLabel}>Deleži</ThemedText>
+                {newExpense.splitBetween.map((memberName) => (
+                  <View key={memberName} style={styles.shareInputRow}>
+                    <ThemedText style={styles.shareInputLabel}>{memberName}</ThemedText>
+                    <TextInput
+                      style={[styles.shareInput, { color: Colors[colorScheme ?? 'light'].text }]}
+                      value={memberShares[memberName]?.toString() || ''}
+                      onChangeText={(text) => {
+                        const value = parseFloat(text) || 0;
+                        setMemberShares(prev => ({ ...prev, [memberName]: value }));
+                      }}
+                      placeholder="0"
+                      placeholderTextColor={Colors[colorScheme ?? 'light'].icon}
+                      keyboardType="numeric"
+                    />
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {splitMode === 'percentage' && newExpense.splitBetween.length > 0 && (
+              <View style={styles.inputGroup}>
+                <ThemedText style={styles.inputLabel}>Odstotki</ThemedText>
+                {newExpense.splitBetween.map((memberName) => (
+                  <View key={memberName} style={styles.shareInputRow}>
+                    <ThemedText style={styles.shareInputLabel}>{memberName}</ThemedText>
+                    <TextInput
+                      style={[styles.shareInput, { color: Colors[colorScheme ?? 'light'].text }]}
+                      value={memberPercentages[memberName]?.toString() || ''}
+                      onChangeText={(text) => {
+                        const value = parseFloat(text) || 0;
+                        setMemberPercentages(prev => ({ ...prev, [memberName]: value }));
+                      }}
+                      placeholder="0"
+                      placeholderTextColor={Colors[colorScheme ?? 'light'].icon}
+                      keyboardType="numeric"
+                    />
+                    <ThemedText style={styles.percentageSymbol}>%</ThemedText>
+                  </View>
+                ))}
+                <ThemedText style={styles.percentageTotal}>
+                  Skupaj: {newExpense.splitBetween.reduce((sum, name) => sum + (memberPercentages[name] || 0), 0)}%
+                </ThemedText>
+              </View>
+            )}
             
             <View style={styles.formButtons}>
               <TouchableOpacity 
@@ -317,7 +574,7 @@ export default function GroupDetailScreen() {
                 style={[styles.formButton, styles.saveButton]}
                 onPress={handleAddExpense}
               >
-                <ThemedText style={styles.saveButtonText}>Shrani</ThemedText>
+                <ThemedText style={styles.saveButtonText}>Dodaj strošek</ThemedText>
               </TouchableOpacity>
             </View>
           </View>
@@ -376,6 +633,27 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
+  },
+  statsSection: {
+    marginBottom: 24,
+  },
+  statHeader: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  statRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+  },
+  statRowName: {
+    fontSize: 14,
+    color: '#444',
+  },
+  statRowValue: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   statItem: {
     flex: 1,
@@ -607,5 +885,103 @@ const styles = StyleSheet.create({
   },
   selectedChipText: {
     color: 'white',
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+    color: '#333',
+  },
+  splitModeContainer: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    borderRadius: 8,
+    padding: 4,
+  },
+  splitModeButton: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  splitModeButtonActive: {
+    backgroundColor: '#0066CC',
+  },
+  splitModeText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#666',
+  },
+  splitModeTextActive: {
+    color: 'white',
+  },
+  splitHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  splitDetails: {
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 8,
+  },
+  splitDetailsTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+    color: '#333',
+  },
+  splitDetailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  splitDetailName: {
+    fontSize: 14,
+    color: '#666',
+  },
+  splitDetailAmount: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  shareInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  shareInputLabel: {
+    fontSize: 14,
+    color: '#666',
+    width: 80,
+  },
+  shareInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.1)',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    fontSize: 14,
+    marginRight: 8,
+  },
+  percentageSymbol: {
+    fontSize: 14,
+    color: '#666',
+    width: 20,
+  },
+  percentageTotal: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 4,
+    fontStyle: 'italic',
   },
 });
