@@ -8,11 +8,13 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function GroupsScreen() {
   const colorScheme = useColorScheme();
   const { groups } = useGroups();
   const [showAddGroupModal, setShowAddGroupModal] = useState(false);
+  const insets = useSafeAreaInsets();
 
   const formatAmount = (amount: number) => {
     return `${amount.toFixed(2)} EUR`;
@@ -27,7 +29,7 @@ export default function GroupsScreen() {
   return (
     <ThemedView style={styles.container}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
           <View style={styles.headerContent}>
             <View style={styles.logoWrapper}>
               <View style={styles.logoIcon}>
@@ -162,7 +164,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingTop: 60,
     paddingHorizontal: 20,
     paddingBottom: 24,
     backgroundColor: '#1e40af', // Flik Pay blue

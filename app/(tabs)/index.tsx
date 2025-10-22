@@ -304,13 +304,6 @@ export default function HomeScreen() {
               ]}>EN</ThemedText>
             </View>
           </View>
-          
-          <View style={styles.balanceCard}>
-            <ThemedText style={styles.balanceLabel}>Stanje</ThemedText>
-            <ThemedText type="title">
-              {formatAmount(balance)}
-            </ThemedText>
-          </View>
         </View>
 
         {/* Quick Payment Actions */}

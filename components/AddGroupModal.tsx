@@ -149,7 +149,11 @@ export default function AddGroupModal({ visible, onClose }: AddGroupModalProps) 
           </View>
         </View>
 
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView 
+          style={styles.content} 
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
           {/* Group Name */}
           <View style={styles.section}>
             <ThemedText style={styles.sectionTitle}>Ime skupine</ThemedText>
@@ -401,6 +405,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 16,
   },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 60,
+  },
   section: {
     marginBottom: 16,
     backgroundColor: 'white',
@@ -531,7 +539,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
-    maxHeight: 200,
+    maxHeight: 300,
+    marginTop: 8,
   },
   memberResultOption: {
     flexDirection: 'row',
