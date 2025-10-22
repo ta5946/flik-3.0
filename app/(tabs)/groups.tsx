@@ -36,7 +36,7 @@ export default function GroupsScreen() {
                 <IconSymbol name="person.3.fill" size={24} color="white" />
               </View>
               <ThemedText type="title" style={styles.headerTitle}>
-                Skupine
+                Flik Split
               </ThemedText>
             </View>
             <ThemedText style={styles.headerSubtitle}>
